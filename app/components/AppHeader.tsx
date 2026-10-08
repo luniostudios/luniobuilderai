@@ -19,6 +19,11 @@ export default function AppHeader({ user }: { user?: NonNullable<Session["user"]
           {activeUser ? (
             <>
               <span className="hidden max-w-45 truncate text-sm text-muted-foreground sm:block">
+                <Link href={"/dashboard"}>
+                  Dashboard
+                </Link>
+              </span>
+              <span className="hidden max-w-45 truncate text-sm text-muted-foreground sm:block">
                 {activeUser.name || activeUser.email}
               </span>
               <SignOut />
