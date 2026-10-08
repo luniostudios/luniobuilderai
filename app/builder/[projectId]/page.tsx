@@ -1,9 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { getServerSession } from "next-auth";
+import { auth } from "@/lib/auth";
 import BuilderClient from "../../components/BuilderClient";
-import { authOptions } from "@/lib/auth";
 
 export default function BuilderPage({ params }: PageProps<"/builder/[projectId]">) {
   return (
@@ -16,7 +15,7 @@ export default function BuilderPage({ params }: PageProps<"/builder/[projectId]"
 async function ProtectedBuilder({ params }: { params: Promise<{ projectId: string }> }) {
   await connection();
   const { projectId } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session) redirect(`/login?callbackUrl=${encodeURIComponent(`/builder/${projectId}`)}`);
 
   return <BuilderClient projectId={projectId} />;

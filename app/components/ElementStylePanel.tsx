@@ -38,11 +38,13 @@ export default function ElementStylePanel({
   selection,
   saving,
   onChange,
+  onImageUrlChange,
   onClose,
 }: {
   selection: SelectedElement;
   saving: boolean;
   onChange: (property: string, value: string) => void;
+  onImageUrlChange: (value: string) => void;
   onClose: () => void;
 }) {
   const [draftStyles, setDraftStyles] = useState(selection.styles);
@@ -73,6 +75,19 @@ export default function ElementStylePanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         <div className="space-y-3">
+          {selection.tagName === "img" && (
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Image URL</span>
+              <input
+                type="url"
+                value={selection.imageUrl}
+                onChange={(event) => onImageUrlChange(event.target.value)}
+                placeholder="https://example.com/image.jpg"
+                aria-label="Image URL"
+                className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              />
+            </label>
+          )}
           {COLOR_FIELDS.map((field) => (
             <label key={field.property} className="block space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">{field.label}</span>

@@ -1,25 +1,23 @@
-import type { NextAuthOptions } from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import supabase from "./db";
 
-const secret =
-  process.env.NEXTAUTH_SECRET ||
-  process.env.AUTH_SECRET ||
-  (process.env.NODE_ENV === "development" ? "foundry-local-development-secret-only" : undefined);
-
-export const authOptions: NextAuthOptions = {
-  secret,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
-  ],
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
-  callbacks: {
-    async session({ session, token }) {
-      if (session.user && token.sub) session.user.id = token.sub;
-      return session;
+const authOptions = {
+    adapter: supabase,
+    providers: [
+        GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+        }),
+    ],
+    secret: process.env.NEXTAUTH_SECRET,
+    pages: { signIn: "/login" },
+    callbacks: {
+        async session({ session, user }) {
+            if (session.user) session.user.id = user.id;
+            return session;
+        },
     },
-  },
-};
+} satisfies NextAuthConfig;
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authOptions);

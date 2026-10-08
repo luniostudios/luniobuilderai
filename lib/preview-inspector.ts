@@ -3,6 +3,7 @@ export type SelectedElement = {
   tagName: string;
   id: string;
   text: string;
+  imageUrl: string;
   styles: Record<string, string>;
 };
 
@@ -62,6 +63,7 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
         tagName: element.tagName.toLowerCase(),
         id: element.id,
         text: (element.innerText || element.textContent || "").trim().slice(0, 140),
+        imageUrl: element instanceof HTMLImageElement ? element.getAttribute("src") || "" : "",
         styles
       }
     }, "*");
@@ -144,6 +146,20 @@ export function patchElementStyle(html: string, selector: string, property: stri
     if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return html;
     if (value.trim()) element.style.setProperty(property, value.trim());
     else element.style.removeProperty(property);
+    return `<!DOCTYPE html>\n${parsed.documentElement.outerHTML}`;
+  } catch {
+    return html;
+  }
+}
+
+export function patchElementImage(html: string, selector: string, imageUrl: string): string {
+  try {
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const element = parsed.querySelector(selector);
+    if (!(element instanceof HTMLImageElement)) return html;
+    element.removeAttribute("srcset");
+    if (imageUrl.trim()) element.setAttribute("src", imageUrl.trim());
+    else element.removeAttribute("src");
     return `<!DOCTYPE html>\n${parsed.documentElement.outerHTML}`;
   } catch {
     return html;

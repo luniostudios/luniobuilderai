@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-For existing Supabase projects, rerun `supabase/schema.sql` to add the publishing columns and index.
+For existing Supabase projects, rerun `supabase/schema.sql` to create the Auth.js adapter tables and add the app tables and publishing columns. Add `next_auth` to the exposed schemas in Supabase Project Settings under API so the adapter can access its tables.
 
 Create `NEXTAUTH_SECRET` with `openssl rand -base64 32`. Set `OPENROUTER_API_KEY` and choose an OpenRouter model slug in `OPENROUTER_MODEL`. `OPENROUTER_SITE_URL` and `OPENROUTER_APP_NAME` provide OpenRouter request attribution. Use the Supabase project URL and service-role key for `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Keep both API keys server-side; do not expose them as `NEXT_PUBLIC_` variables.
 

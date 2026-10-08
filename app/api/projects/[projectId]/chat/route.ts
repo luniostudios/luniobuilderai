@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Database } from "@/lib/database.types";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/db";
 import { baseprompt } from "./prompt";
 
 type RouteContext = { params: Promise<{ projectId: string }> };

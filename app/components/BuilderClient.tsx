@@ -6,7 +6,7 @@ import { ArrowLeft, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Mo
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
 import ElementStylePanel from "@/app/components/ElementStylePanel";
-import { injectPreviewInspector, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
+import { injectPreviewInspector, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
 import { signOut } from "next-auth/react";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
@@ -29,6 +29,7 @@ function isSelectedElement(value: unknown): value is SelectedElement {
     !("tagName" in value) || typeof value.tagName !== "string" ||
     !("id" in value) || typeof value.id !== "string" ||
     !("text" in value) || typeof value.text !== "string" ||
+    !("imageUrl" in value) || typeof value.imageUrl !== "string" ||
     !("styles" in value) || !value.styles || typeof value.styles !== "object"
   ) return false;
 
@@ -192,6 +193,35 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
     }, 600);
   }
 
+  function handleImageUrlChange(imageUrl: string) {
+    if (!project || !selection) return;
+    const html = patchElementImage(project.html, selection.selector, imageUrl);
+    if (html === project.html) return;
+
+    setProject((current) => current ? { ...current, html } : current);
+    setSelection((current) => current ? { ...current, imageUrl } : current);
+    setSavingStyle(true);
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/projects/${projectId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html }),
+        });
+        if (!response.ok) throw new Error("Could not save image changes.");
+        const result = (await response.json()) as { project: Project };
+        setProject(result.project);
+        setError("");
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "Could not save image changes.");
+      } finally {
+        setSavingStyle(false);
+      }
+    }, 600);
+  }
+
   async function handlePublish() {
     setPublishing(true);
     setPublishError("");
@@ -305,7 +335,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas">
         <p className="text-sm text-muted-foreground">{error || "This website doesn't exist anymore."}</p>
-        <a href="/" className="text-sm font-medium text-primary hover:underline">Back to your websites</a>
+        <a href="/dashboard" className="text-sm font-medium text-primary hover:underline">Back to your websites</a>
       </main>
     );
   }
@@ -315,7 +345,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
       <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border/70 px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Link
-            href="/"
+            href="/dashboard"
             aria-label="Back to projects"
             className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
@@ -538,6 +568,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
               selection={selection}
               saving={savingStyle}
               onChange={handleStyleChange}
+              onImageUrlChange={handleImageUrlChange}
               onClose={() => setSelection(null)}
             />
           </section>
