@@ -15,6 +15,8 @@ export type Database = {
           owner_id: string;
           name: string;
           html: string;
+          published_slug: string | null;
+          published_at: string | null;
           created_date: string;
           updated_date: string;
         };
@@ -23,6 +25,8 @@ export type Database = {
           owner_id: string;
           name?: string;
           html?: string;
+          published_slug?: string | null;
+          published_at?: string | null;
           created_date?: string;
           updated_date?: string;
         };
@@ -31,6 +35,8 @@ export type Database = {
           owner_id?: string;
           name?: string;
           html?: string;
+          published_slug?: string | null;
+          published_at?: string | null;
           created_date?: string;
           updated_date?: string;
         };

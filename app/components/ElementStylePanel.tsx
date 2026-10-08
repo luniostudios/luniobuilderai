@@ -111,7 +111,7 @@ export default function ElementStylePanel({
       </div>
 
       <footer className="shrink-0 border-t border-border/70 px-4 py-3 text-xs text-muted-foreground">
-        {saving ? "Saving style…" : "Style changes save automatically"}
+        {saving ? "Saving changes…" : "Changes save automatically"}
       </footer>
     </aside>
   );

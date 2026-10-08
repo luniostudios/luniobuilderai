@@ -1,6 +1,6 @@
 # Foundry
 
-Foundry is a TypeScript Next.js App Router application. NextAuth handles Google sign-in, and each user's projects, generated HTML, and chat history are stored in Supabase. The builder uses OpenRouter to create complete HTML pages and revise them through persistent chat.
+LUNIO Builder is a TypeScript Next.js App Router application. NextAuth handles Google sign-in, and each user's projects, generated HTML, and chat history are stored in Supabase. The builder uses OpenRouter to create complete HTML pages and revise them through persistent chat.
 
 ## Setup
 
@@ -13,6 +13,8 @@ Foundry is a TypeScript Next.js App Router application. NextAuth handles Google 
 npm install
 npm run dev
 ```
+
+For existing Supabase projects, rerun `supabase/schema.sql` to add the publishing columns and index.
 
 Create `NEXTAUTH_SECRET` with `openssl rand -base64 32`. Set `OPENROUTER_API_KEY` and choose an OpenRouter model slug in `OPENROUTER_MODEL`. `OPENROUTER_SITE_URL` and `OPENROUTER_APP_NAME` provide OpenRouter request attribution. Use the Supabase project URL and service-role key for `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Keep both API keys server-side; do not expose them as `NEXT_PUBLIC_` variables.
 
