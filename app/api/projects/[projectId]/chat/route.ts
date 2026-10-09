@@ -38,10 +38,10 @@ export async function POST(request: Request, { params }: RouteContext) {
   const ownerId = await getAuthenticatedUserId();
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "AI generation is not configured. Add OPENROUTER_API_KEY to your server environment." },
+      { error: "AI generation is not configured. Add GEMINI_API_KEY to your server environment." },
       { status: 503 }
     );
   }
@@ -91,8 +91,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (insertError) return NextResponse.json({ error: "Could not save your message." }, { status: 500 });
 
   const history = ((priorMessages ?? []) as Message[]).reverse().map((message) => ({
-    role: message.role,
-    content: message.content.slice(-8000),
+    role: message.role === "assistant" ? "model" : "user",
+    parts: [{ text: message.content.slice(-8000) }],
   }));
   const systemPrompt = [
     baseprompt,
@@ -101,52 +101,75 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   let providerResponse: Response;
   try {
-    providerResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+    providerResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        "x-goog-api-key": apiKey,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.OPENROUTER_SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000",
-        "X-Title": process.env.OPENROUTER_APP_NAME || "Foundry Website Builder",
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [
           ...history,
-          { role: "user", content: body.message.trim() },
+          { role: "user", parts: [{ text: body.message.trim() }] },
         ],
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: "website_update", strict: true, schema: RESPONSE_SCHEMA },
+        generationConfig: {
+          responseFormat: {
+            text: { mimeType: "APPLICATION_JSON", schema: RESPONSE_SCHEMA },
+          },
+          maxOutputTokens: 12000,
         },
-        max_completion_tokens: 12000,
       }),
       signal: AbortSignal.timeout(90000),
-    });
+      }
+    );
   } catch {
-    return NextResponse.json({ error: "Could not reach the AI provider. Please try again." }, { status: 502 });
+    return NextResponse.json({ error: "Could not reach the Gemini API. Please try again." }, { status: 502 });
   }
 
   if (!providerResponse.ok) {
+    const providerError: unknown = await providerResponse.json().catch(() => null);
+    const errorMessage =
+      providerError && typeof providerError === "object" && "error" in providerError &&
+      providerError.error && typeof providerError.error === "object" && "message" in providerError.error &&
+      typeof providerError.error.message === "string"
+        ? providerError.error.message.slice(0, 500)
+        : `HTTP ${providerResponse.status}`;
     return NextResponse.json(
-      { error: "The AI provider rejected the request. Check your API key, model, and account limits." },
+      { error: `Gemini API request failed: ${errorMessage}` },
       { status: 502 }
     );
   }
 
   const completion: unknown = await providerResponse.json().catch(() => null);
-  const content =
-    completion && typeof completion === "object" && "choices" in completion &&
-    Array.isArray(completion.choices) && completion.choices[0] &&
-    typeof completion.choices[0] === "object" && "message" in completion.choices[0] &&
-    completion.choices[0].message && typeof completion.choices[0].message === "object" &&
-    "content" in completion.choices[0].message
-      ? completion.choices[0].message.content
+  const candidates =
+    completion && typeof completion === "object" && "candidates" in completion &&
+    Array.isArray(completion.candidates)
+      ? completion.candidates
+      : [];
+  const firstCandidate = candidates[0];
+  const candidateContent =
+    firstCandidate && typeof firstCandidate === "object" && "content" in firstCandidate
+      ? firstCandidate.content
       : null;
+  const parts =
+    candidateContent && typeof candidateContent === "object" && "parts" in candidateContent &&
+    Array.isArray(candidateContent.parts)
+      ? candidateContent.parts
+      : [];
+  const content = parts
+    .map((part: unknown) =>
+      part && typeof part === "object" && "text" in part && typeof part.text === "string"
+        ? part.text
+        : ""
+    )
+    .join("");
 
-  if (typeof content !== "string") {
-    return NextResponse.json({ error: "The AI returned an empty response. Please try again." }, { status: 502 });
+  if (!content.trim()) {
+    return NextResponse.json({ error: "Gemini returned an empty response. Please try again." }, { status: 502 });
   }
 
   let update: unknown;
