@@ -1,9 +1,4 @@
-create table if not exists public.users (
-  id text primary key,
-  name text,
-  email text,
-  image text
-);
+drop table if exists public.users;
 
 create schema if not exists next_auth;
 grant usage on schema next_auth to service_role;
@@ -59,6 +54,7 @@ create table if not exists public.projects (
   owner_id text not null,
   name text not null default 'Untitled site',
   html text not null default '',
+  cms_data jsonb not null default '{"collections": []}'::jsonb,
   published_slug text,
   published_at timestamptz,
   created_date timestamptz not null default now(),
@@ -67,6 +63,7 @@ create table if not exists public.projects (
 
 alter table public.projects add column if not exists published_slug text;
 alter table public.projects add column if not exists published_at timestamptz;
+alter table public.projects add column if not exists cms_data jsonb not null default '{"collections": []}'::jsonb;
 
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
@@ -85,6 +82,5 @@ create unique index if not exists projects_published_slug_idx
 create index if not exists messages_project_created_idx
   on public.messages (project_id, created_date);
 
-alter table public.users enable row level security;
 alter table public.projects enable row level security;
 alter table public.messages enable row level security;

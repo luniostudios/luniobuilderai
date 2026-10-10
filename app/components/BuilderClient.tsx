@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet } from "lucide-react";
+import { ArrowLeft, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
 import ElementStylePanel from "@/app/components/ElementStylePanel";
+import CmsManager from "@/app/components/CmsManager";
 import { injectPreviewInspector, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
+import { injectCmsContent, normalizeCmsData, toCmsJson } from "@/lib/cms";
+import type { CmsData } from "@/lib/cms";
 import { signOut } from "next-auth/react";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type StoredMessage = Database["public"]["Tables"]["messages"]["Row"];
 type ChatMessage = Pick<StoredMessage, "id" | "role" | "content" | "created_date">;
 type ActivePanel = "chat" | "preview";
+type BuilderView = "website" | "cms";
 type PreviewMode = "edit" | "preview";
 type Breakpoint = "desktop" | "tablet" | "mobile";
 
@@ -50,6 +54,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [activePanel, setActivePanel] = useState<ActivePanel>("chat");
+  const [builderView, setBuilderView] = useState<BuilderView>("website");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("edit");
   const [breakpoint, setBreakpoint] = useState<Breakpoint>("desktop");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -254,6 +259,22 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
     }
   }
 
+  async function saveCmsData(cmsData: CmsData): Promise<string | null> {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cms_data: toCmsJson(cmsData) }),
+      });
+      const result = await response.json() as { error?: string; project?: Project };
+      if (!response.ok || !result.project) return result.error || "Could not save CMS changes.";
+      setProject(result.project);
+      return null;
+    } catch {
+      return "Could not save CMS changes. Check your connection and try again.";
+    }
+  }
+
   const refreshMessages = useCallback(async () => {
     const response = await fetch(`/api/projects/${projectId}/messages`);
     if (!response.ok) return;
@@ -391,6 +412,29 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
       {publishError && <p role="alert" className="shrink-0 border-b border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive">{publishError}</p>}
 
+      <nav aria-label="Builder workspace" className="flex h-11 shrink-0 border-b border-border/70">
+        <button
+          type="button"
+          aria-pressed={builderView === "website"}
+          onClick={() => setBuilderView("website")}
+          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "website" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <Monitor className="h-4 w-4" /> Website
+        </button>
+        <button
+          type="button"
+          aria-pressed={builderView === "cms"}
+          onClick={() => setBuilderView("cms")}
+          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "cms" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <DatabaseIcon className="h-4 w-4" /> CMS
+          {(normalizeCmsData(project.cms_data)?.collections.length ?? 0) > 0 && <span className="text-xs tabular-nums text-muted-foreground">{normalizeCmsData(project.cms_data)?.collections.length}</span>}
+        </button>
+      </nav>
+
+      {builderView === "cms" ? (
+        <CmsManager key={project.updated_date} value={project.cms_data} onSave={saveCmsData} />
+      ) : <>
       <nav aria-label="Builder panels" className={`h-11 shrink-0 border-b border-border/70 lg:hidden ${previewMode === "edit" ? "flex" : "hidden"}`}>
         <button
           type="button"
@@ -541,7 +585,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                   ref={previewRef}
                   key={project.updated_date}
                   title={`${project.name} live preview`}
-                  srcDoc={injectPreviewInspector(project.html)}
+                  srcDoc={injectPreviewInspector(injectCmsContent(project.html, project.cms_data))}
                   sandbox="allow-scripts allow-forms allow-popups"
                   onLoad={restorePreviewSelection}
                   className="h-full w-full rounded-lg border border-border bg-white shadow-sm [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb"
@@ -574,6 +618,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           </section>
         )}
       </div>
+      </>}
     </main>
   );
 }

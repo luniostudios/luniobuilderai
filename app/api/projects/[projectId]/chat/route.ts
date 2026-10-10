@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Database } from "@/lib/database.types";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
+import { normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { baseprompt } from "./prompt";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
@@ -12,6 +13,7 @@ type WebsiteUpdate = {
   name: string;
   reply: string;
   html: string;
+  cmsData: unknown;
 };
 
 const RESPONSE_SCHEMA = {
@@ -20,8 +22,52 @@ const RESPONSE_SCHEMA = {
     name: { type: "string" },
     reply: { type: "string" },
     html: { type: "string" },
+    cmsData: {
+      type: "object",
+      properties: {
+        collections: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              fields: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    key: { type: "string" },
+                    label: { type: "string" },
+                    type: { type: "string", enum: ["text", "image", "url", "date"] },
+                  },
+                  required: ["key", "label", "type"],
+                  additionalProperties: false,
+                },
+              },
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    values: { type: "object", additionalProperties: { type: "string" } },
+                  },
+                  required: ["id", "values"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["id", "name", "fields", "items"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["collections"],
+      additionalProperties: false,
+    },
   },
-  required: ["name", "reply", "html"],
+  required: ["name", "reply", "html", "cmsData"],
   additionalProperties: false,
 };
 
@@ -30,7 +76,8 @@ function isWebsiteUpdate(value: unknown): value is WebsiteUpdate {
   return (
     "name" in value && typeof value.name === "string" &&
     "reply" in value && typeof value.reply === "string" &&
-    "html" in value && typeof value.html === "string" && value.html.trim().length > 0
+    "html" in value && typeof value.html === "string" && value.html.trim().length > 0 &&
+    "cmsData" in value && normalizeCmsData(value.cmsData) !== null
   );
 }
 
@@ -97,6 +144,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const systemPrompt = [
     baseprompt,
     `Current complete HTML (empty means this is a new website):\n${currentProject.html.slice(0, 120000) || "(empty)"}`,
+    `Current CMS data:\n${JSON.stringify(currentProject.cms_data ?? { collections: [] }).slice(0, 60000)}`,
   ].join("\n\n");
 
   let providerResponse: Response;
@@ -187,7 +235,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const name = update.name.trim().slice(0, 120) || currentProject.name;
   const { data: updatedProject, error: updateError } = await supabase
     .from("projects")
-    .update({ name, html, updated_date: new Date().toISOString() })
+    .update({ name, html, cms_data: toCmsJson(normalizeCmsData(update.cmsData)!), updated_date: new Date().toISOString() })
     .eq("id", projectId)
     .eq("owner_id", ownerId)
     .select("*")
