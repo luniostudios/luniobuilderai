@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet } from "lucide-react";
+import { ArrowLeft, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Triangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
 import ElementStylePanel from "@/app/components/ElementStylePanel";
@@ -69,6 +69,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   const [savingStyle, setSavingStyle] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
+  const [showVercelDialog, setShowVercelDialog] = useState(false);
+  const [vercelToken, setVercelToken] = useState("");
+  const [vercelTeamId, setVercelTeamId] = useState("");
+  const [vercelDeploying, setVercelDeploying] = useState(false);
+  const [vercelError, setVercelError] = useState("");
+  const [vercelDeploymentUrl, setVercelDeploymentUrl] = useState("");
   const initialPromptStartedRef = useRef(false);
 
   useEffect(() => {
@@ -304,6 +310,40 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
     }
   }
 
+  async function handleVercelDeploy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!vercelToken.trim() || vercelDeploying) return;
+    setVercelDeploying(true);
+    setVercelError("");
+    setVercelDeploymentUrl("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/deploy-vercel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: vercelToken, teamId: vercelTeamId.trim() || undefined }),
+      });
+      const result = await response.json() as { error?: string; url?: string };
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || "Could not deploy to Vercel.");
+      }
+      setVercelDeploymentUrl(result.url);
+      setVercelToken("");
+    } catch (reason) {
+      setVercelError(reason instanceof Error ? reason.message : "Could not deploy to Vercel.");
+    } finally {
+      setVercelDeploying(false);
+    }
+  }
+
+  function closeVercelDialog() {
+    if (vercelDeploying) return;
+    setShowVercelDialog(false);
+    setVercelToken("");
+    setVercelTeamId("");
+    setVercelError("");
+    setVercelDeploymentUrl("");
+  }
+
   async function saveCmsData(cmsData: CmsData): Promise<string | null> {
     try {
       const response = await fetch(`/api/projects/${projectId}`, {
@@ -448,6 +488,21 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
             <LogOut className="h-4 w-4" />
             Sign out
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              setVercelError("");
+              setVercelDeploymentUrl("");
+              setShowVercelDialog(true);
+            }}
+            disabled={!project.html.trim() || savingStyle}
+          >
+            <Triangle className="h-3.5 w-3.5 fill-current" />
+            <span className="hidden sm:inline">Deploy to Vercel</span>
+            <span className="sm:hidden">Vercel</span>
+          </Button>
           {project.published_slug ? (
             <>
               <a
@@ -471,6 +526,99 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
       </header>
 
       {publishError && <p role="alert" className="shrink-0 border-b border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive">{publishError}</p>}
+
+      {showVercelDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) closeVercelDialog();
+        }}>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="vercel-deploy-title"
+            className="w-full max-w-md rounded-xl border border-border bg-background p-5 shadow-xl"
+          >
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="vercel-deploy-title" className="font-heading text-base font-semibold">Deploy to Vercel</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Deploy this website as a static site in your Vercel account.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close Vercel deployment dialog"
+                onClick={closeVercelDialog}
+                disabled={vercelDeploying}
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            {vercelDeploymentUrl ? (
+              <div className="space-y-4">
+                <p className="text-sm">Your Vercel deployment has been created.</p>
+                <a
+                  href={vercelDeploymentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block break-all text-sm font-medium text-primary underline underline-offset-4"
+                >
+                  {vercelDeploymentUrl}
+                </a>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Vercel may take a moment to finish activating the site.
+                </p>
+                <div className="flex justify-end">
+                  <Button type="button" onClick={closeVercelDialog}>Done</Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleVercelDeploy} className="space-y-4">
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium">Vercel access token</span>
+                  <input
+                    type="password"
+                    value={vercelToken}
+                    onChange={(event) => setVercelToken(event.target.value)}
+                    autoComplete="off"
+                    required
+                    maxLength={512}
+                    disabled={vercelDeploying}
+                    placeholder="Paste a Vercel access token"
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium">Team ID <span className="font-normal text-muted-foreground">(optional)</span></span>
+                  <input
+                    value={vercelTeamId}
+                    onChange={(event) => setVercelTeamId(event.target.value)}
+                    autoComplete="off"
+                    maxLength={128}
+                    disabled={vercelDeploying}
+                    placeholder="Use your personal account if blank"
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  />
+                </label>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Create a token in{" "}
+                  <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                    Vercel account settings
+                  </a>
+                    . The token is used only for this deployment request and is not saved by LUNIO.
+                </p>
+                {vercelError && <p role="alert" className="text-sm text-destructive">{vercelError}</p>}
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={closeVercelDialog} disabled={vercelDeploying}>Cancel</Button>
+                  <Button type="submit" disabled={!vercelToken.trim() || vercelDeploying}>
+                    {vercelDeploying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deploying…</> : "Deploy"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </section>
+        </div>
+      )}
 
       <nav aria-label="Builder workspace" className="flex h-11 shrink-0 border-b border-border/70">
         <button

@@ -77,7 +77,7 @@ function isWebsiteUpdate(value: unknown): value is WebsiteUpdate {
   return (
     "name" in value && typeof value.name === "string" &&
     "reply" in value && typeof value.reply === "string" &&
-    "html" in value && typeof value.html === "string" && value.html.trim().length > 0 &&
+    "html" in value && typeof value.html === "string" &&
     "cmsData" in value && normalizeCmsData(value.cmsData) !== null
   );
 }
@@ -263,25 +263,29 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "The AI returned an invalid or oversized website." }, { status: 502 });
   }
 
-  let html = update.html.trim();
-  usedImages.forEach((image) => {
-    const index = attachments.indexOf(image);
-    html = html.replaceAll(`LUNIO_UPLOADED_IMAGE_${index}`, `data:image/webp;base64,${image.data}`);
-  });
-  if (html.length > 6000000) {
-    return NextResponse.json({ error: "The generated website with attached images is too large. Try smaller images." }, { status: 502 });
-  }
-  const name = update.name.trim().slice(0, 120) || currentProject.name;
-  const { data: updatedProject, error: updateError } = await supabase
-    .from("projects")
-    .update({ name, html, cms_data: toCmsJson(normalizeCmsData(update.cmsData)!), updated_date: new Date().toISOString() })
-    .eq("id", projectId)
-    .eq("owner_id", ownerId)
-    .select("*")
-    .maybeSingle();
+  let updatedProject: Project = currentProject;
+  if (update.html.trim()) {
+    let html = update.html.trim();
+    usedImages.forEach((image) => {
+      const index = attachments.indexOf(image);
+      html = html.replaceAll(`LUNIO_UPLOADED_IMAGE_${index}`, `data:image/webp;base64,${image.data}`);
+    });
+    if (html.length > 6000000) {
+      return NextResponse.json({ error: "The generated website with attached images is too large. Try smaller images." }, { status: 502 });
+    }
+    const name = update.name.trim().slice(0, 120) || currentProject.name;
+    const { data, error: updateError } = await supabase
+      .from("projects")
+      .update({ name, html, cms_data: toCmsJson(normalizeCmsData(update.cmsData)!), updated_date: new Date().toISOString() })
+      .eq("id", projectId)
+      .eq("owner_id", ownerId)
+      .select("*")
+      .maybeSingle();
 
-  if (updateError || !updatedProject) {
-    return NextResponse.json({ error: "The website was generated but could not be saved." }, { status: 500 });
+    if (updateError || !data) {
+      return NextResponse.json({ error: "The website was generated but could not be saved." }, { status: 500 });
+    }
+    updatedProject = data as Project;
   }
 
   const { data: assistantMessage, error: assistantInsertError } = await supabase

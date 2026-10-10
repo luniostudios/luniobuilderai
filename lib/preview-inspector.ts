@@ -23,11 +23,6 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
 <script>
 (() => {
   let mode = "edit";
-  const styleProperties = [
-    "color", "background-color", "font-family", "font-size", "font-weight",
-    "text-align", "line-height", "padding", "margin", "border-radius",
-    "border-width", "border-color", "max-width", "opacity"
-  ];
 
   function selectorFor(element) {
     const parts = [];
@@ -55,7 +50,10 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
     element.setAttribute("data-foundry-selected", "");
     const computed = getComputedStyle(element);
     const styles = {};
-    styleProperties.forEach((property) => { styles[property] = computed.getPropertyValue(property); });
+    for (let index = 0; index < computed.length; index += 1) {
+      const property = computed.item(index);
+      styles[property] = computed.getPropertyValue(property);
+    }
     window.parent.postMessage({
       type: "foundry:select",
       payload: {
@@ -140,12 +138,17 @@ export function injectPreviewInspector(html: string): string {
 
 export function patchElementStyle(html: string, selector: string, property: string, value: string): string {
   try {
+    const normalizedProperty = property.trim();
+    if (!/^(--[a-zA-Z0-9_-]+|-?[a-zA-Z][a-zA-Z0-9-]*)$/.test(normalizedProperty)) return html;
     const parsed = new DOMParser().parseFromString(html, "text/html");
     const element = parsed.querySelector(selector);
     if (!element) return html;
     if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return html;
-    if (value.trim()) element.style.setProperty(property, value.trim());
-    else element.style.removeProperty(property);
+    if (value.trim()) {
+      const importantValue = value.trim().match(/^(.*?)(?:\s*!important)\s*$/i);
+      if (importantValue) element.style.setProperty(normalizedProperty, importantValue[1].trim(), "important");
+      else element.style.setProperty(normalizedProperty, value.trim());
+    } else element.style.removeProperty(normalizedProperty);
     return `<!DOCTYPE html>\n${parsed.documentElement.outerHTML}`;
   } catch {
     return html;
