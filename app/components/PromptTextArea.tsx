@@ -58,7 +58,7 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
     }
 
     return (
-        <div className="prompt-composer">
+        <div className="border border-black/30 p-6 rounded-md border-dashed">
             <form onSubmit={handleGenerate}>
                 <div className="prompt-input-wrap">
                     <textarea
@@ -71,13 +71,15 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
                         placeholder="A site for…"
                         className="prompt-textarea"
                     />
-                    <ImageAttachments images={images} onChange={setImages} disabled={creating || limitReached} />
                     <div className="prompt-submit-row">
                         <span className="prompt-char-count">{prompt.length ? `${prompt.length} / 8000` : "Press enter to create"}</span>
-                        <Button type="submit" size="lg" disabled={creating || limitReached || status === "loading" || (!prompt.trim() && !images.length)} className="prompt-submit">
-                            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                            {creating ? "Starting..." : status === "unauthenticated" ? "Sign in to create" : "Create my site"}
-                        </Button>
+                        <div className="flex flex-row gap-3">
+                            <ImageAttachments images={images} onChange={setImages} disabled={creating || limitReached} />
+                            <Button type="submit" size="sm" disabled={creating || limitReached || status === "loading" || (!prompt.trim() && !images.length)} className="prompt-submit">
+                                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                                {creating ? "Starting..." : status === "unauthenticated" ? "Sign in to create" : "Create my site"}
+                            </Button>
+                        </div>
                     </div>
                 </div>
                 <div className="prompt-starters" aria-label="Prompt ideas">

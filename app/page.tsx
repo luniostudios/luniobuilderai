@@ -10,18 +10,22 @@ export default function HomePage() {
         <AppHeader />
         <main className="w-full flex flex-col items-center align-middle gap-20 px-6 py-14">
           <section>
-            <div>
-              <div className='mb-10 flex flex-col items-center text-center'>
-                <h1 className='max-w-4xl text-4xl font-semibold leading-[0.98] text-black tracking-[-0.04em] sm:text-8xl'>
-                  Tell us what to build.
-                </h1>
-                <span className='block max-w-4xl text-4xl font-semibold leading-[0.98] text-black sm:text-8xl'>We&apos;ll make it real.</span>
-                <p className='mt-6 max-w-xl text-base leading-7 text-black/55 sm:text-lg'>Describe your website, a feeling, or a business. LUNIO Builder turns your words into an editable website you can shape in the visual editor.</p>
+            <div className='flex flex-col max-w-7xl justify-center mx-auto items-center gap-10 sm:flex-row sm:gap-20'>
+              <div className='flex-1 w-full'>
+                <div className='mb-10 flex flex-col'>
+                  <h1 className='w-full text-6xl font-bold'>
+                    Tell us what to build. Well make it real.
+                  </h1>
+                  <p className='mt-6 max-w-xl text-base leading-7 text-black/55 sm:text-lg'>Describe your website, a feeling, or a business. LUNIO Builder turns your words into an editable website you can shape in the visual editor.</p>
+                </div>
+                <PromptTextArea />
+                <div className="home-trust-row">
+                  <span><Check size={14} /> No code required</span>
+                  <span><Check size={14} /> Make it yours as you go</span>
+                </div>
               </div>
-              <PromptTextArea />
-              <div className="home-trust-row">
-                <span><Check size={14} /> No code required</span>
-                <span><Check size={14} /> Make it yours as you go</span>
+              <div className='flex-1 w-full'>
+                <img src="./hero.png" height="400" width="full" alt="" />
               </div>
             </div>
           </section>
