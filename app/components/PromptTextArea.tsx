@@ -3,17 +3,20 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowRight, Loader2, Sparkles, WandSparkles } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import type { Database } from "@/lib/database.types";
+import ImageAttachments from "@/app/components/ImageAttachments";
+import type { ImageAttachment } from "@/lib/image-attachments";
 import { Button } from "@/components/ui/button";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 
-const PromptTextArea = () => {
+const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) => {
     const router = useRouter();
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState("");
     const [prompt, setPrompt] = useState("");
+    const [images, setImages] = useState<ImageAttachment[]>([]);
     const { status } = useSession();
 
     const starters = [
@@ -29,11 +32,11 @@ const PromptTextArea = () => {
             return;
         }
         const initialPrompt = prompt.trim();
-        if (!initialPrompt || creating) return;
-        void createProject(initialPrompt);
+        if ((!initialPrompt && !images.length) || creating || limitReached) return;
+        void createProject(initialPrompt, images);
     }
 
-    async function createProject(initialPrompt?: string) {
+    async function createProject(initialPrompt?: string, attachments: ImageAttachment[] = []) {
         setCreating(true);
         setError("");
         try {
@@ -42,10 +45,10 @@ const PromptTextArea = () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: "Untitled site" }),
             });
-            if (!response.ok) throw new Error("Could not create project.");
-            const result: { project: Project } = await response.json();
-            if (initialPrompt) {
-                window.sessionStorage.setItem(`foundry:initial-prompt:${result.project.id}`, initialPrompt);
+            const result = await response.json() as { error?: string; project?: Project };
+            if (!response.ok || !result.project) throw new Error(result.error || "Could not create project.");
+            if (initialPrompt || attachments.length) {
+                window.sessionStorage.setItem(`foundry:initial-prompt:${result.project.id}`, JSON.stringify({ message: initialPrompt, images: attachments }));
             }
             router.push(`/builder/${result.project.id}`);
         } catch (reason) {
@@ -64,32 +67,34 @@ const PromptTextArea = () => {
                         onChange={(event) => setPrompt(event.target.value)}
                         maxLength={8000}
                         rows={4}
-                        disabled={creating}
+                        disabled={creating || limitReached}
                         placeholder="A site for…"
                         className="prompt-textarea"
                     />
+                    <ImageAttachments images={images} onChange={setImages} disabled={creating || limitReached} />
                     <div className="prompt-submit-row">
                         <span className="prompt-char-count">{prompt.length ? `${prompt.length} / 8000` : "Press enter to create"}</span>
-                        <Button type="submit" size="lg" disabled={creating || status === "loading" || !prompt.trim()} className="prompt-submit">
+                        <Button type="submit" size="lg" disabled={creating || limitReached || status === "loading" || (!prompt.trim() && !images.length)} className="prompt-submit">
                             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                             {creating ? "Starting..." : status === "unauthenticated" ? "Sign in to create" : "Create my site"}
                         </Button>
                     </div>
                 </div>
                 <div className="prompt-starters" aria-label="Prompt ideas">
-                    <span className="prompt-starters-label"><Sparkles size={13} /> TRY</span>
+                    <span className="prompt-starters-label">TRY</span>
                     {starters.map((starter) => (
                         <button
                             key={starter.label}
                             type="button"
                             className="prompt-starter"
                             onClick={() => setPrompt(starter.prompt)}
-                            disabled={creating}
+                            disabled={creating || limitReached}
                         >
                             {starter.label}
                         </button>
                     ))}
                 </div>
+                {limitReached && <p className="prompt-error">You’ve reached your website limit. Delete a website to create another.</p>}
                 {error && <p role="alert" className="prompt-error">{error}</p>}
             </form>
         </div>

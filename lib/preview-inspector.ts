@@ -178,3 +178,15 @@ export function patchElementText(html: string, selector: string, text: string): 
     return html;
   }
 }
+
+export function patchElementDelete(html: string, selector: string): string {
+  try {
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const element = parsed.querySelector(selector);
+    if (!element || ["html", "head", "body"].includes(element.tagName.toLowerCase())) return html;
+    element.remove();
+    return `<!DOCTYPE html>\n${parsed.documentElement.outerHTML}`;
+  } catch {
+    return html;
+  }
+}

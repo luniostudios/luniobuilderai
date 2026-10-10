@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
+import { getUserProjectLimit } from "@/lib/project-limits";
 
 export async function GET() {
   const ownerId = await getAuthenticatedUserId();
@@ -20,6 +21,25 @@ export async function POST(request: Request) {
   const ownerId = await getAuthenticatedUserId();
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const accountLimit = await getUserProjectLimit(ownerId);
+  if ("error" in accountLimit) return NextResponse.json({ error: accountLimit.error }, { status: 500 });
+
+  if (accountLimit.limit !== null) {
+    const { count, error: countError } = await getSupabaseAdmin()
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", ownerId);
+
+    if (countError) return NextResponse.json({ error: "Could not check website limit." }, { status: 500 });
+    if ((count ?? 0) >= accountLimit.limit) {
+      return NextResponse.json({
+        error: `Your ${accountLimit.role} plan allows up to ${accountLimit.limit} ${accountLimit.limit === 1 ? "website" : "websites"}. Delete an existing website to create another.`,
+        code: "PROJECT_LIMIT_REACHED",
+        limit: accountLimit.limit,
+      }, { status: 403 });
+    }
+  }
+
   const body: unknown = await request.json().catch(() => null);
   const name =
     body && typeof body === "object" && "name" in body && typeof body.name === "string"
@@ -32,6 +52,13 @@ export async function POST(request: Request) {
     .select("*")
     .single();
 
+  if (error?.message.includes("PROJECT_LIMIT_REACHED")) {
+    return NextResponse.json({
+      error: "Your current plan has reached its website limit. Delete an existing website to create another.",
+      code: "PROJECT_LIMIT_REACHED",
+      limit: accountLimit.limit,
+    }, { status: 403 });
+  }
   if (error) return NextResponse.json({ error: "Could not create project" }, { status: 500 });
   return NextResponse.json({ project: data }, { status: 201 });
 }

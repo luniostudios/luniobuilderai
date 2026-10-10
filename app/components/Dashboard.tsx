@@ -9,18 +9,31 @@ import { Button } from "@/components/ui/button";
 import AppHeader from "@/app/components/AppHeader";
 import ProjectCard from "@/app/components/ProjectCard";
 import PromptTextArea from "./PromptTextArea";
+import type { UserRole } from "@/lib/project-limits";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type User = NonNullable<Session["user"]>;
 
-export default function Dashboard({ user, initialProjects }: { user: User; initialProjects: Project[] }) {
+export default function Dashboard({
+  user,
+  initialProjects,
+  role,
+  maxProjects,
+}: {
+  user: User;
+  initialProjects: Project[];
+  role: UserRole;
+  maxProjects: number | null;
+}) {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [prompt, setPrompt] = useState("");
+  const atProjectLimit = maxProjects !== null && projects.length >= maxProjects;
 
   async function createProject(initialPrompt?: string) {
+    if (atProjectLimit || creating) return;
     setCreating(true);
     setError("");
     try {
@@ -29,8 +42,8 @@ export default function Dashboard({ user, initialProjects }: { user: User; initi
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Untitled site" }),
       });
-      if (!response.ok) throw new Error("Could not create project.");
-      const result: { project: Project } = await response.json();
+      const result = await response.json() as { error?: string; project?: Project };
+      if (!response.ok || !result.project) throw new Error(result.error || "Could not create project.");
       if (initialPrompt) {
         window.sessionStorage.setItem(`foundry:initial-prompt:${result.project.id}`, initialPrompt);
       }
@@ -69,20 +82,23 @@ export default function Dashboard({ user, initialProjects }: { user: User; initi
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
             Start with a sentence. Then keep asking — new sections, different colours, another page.
             </p>
+            <p className="text-xs text-muted-foreground">
+              {role} plan · {projects.length} / {maxProjects ?? "Unlimited"} websites
+            </p>
           </div>
-          <Button size="lg" variant="outline" onClick={() => void createProject()} disabled={creating} className="gap-2 rounded-full px-6">
+          <Button size="lg" variant="outline" onClick={() => void createProject()} disabled={creating || atProjectLimit} className="gap-2 rounded-full px-6">
             + New website
           </Button>
         </div>
 
         {error && <p role="alert" className="mt-6 text-sm text-destructive">{error}</p>}
-        <PromptTextArea />
+        <PromptTextArea limitReached={atProjectLimit} />
         <div className="mt-10">
           {projects.length === 0 ? (
             <button
               type="button"
               onClick={() => void createProject()}
-              disabled={creating}
+              disabled={creating || atProjectLimit}
               className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border bg-background/60 px-8 py-20 text-center transition-colors hover:border-brand/40 hover:bg-brand/5"
             >
               <span className="font-heading text-base font-semibold">Nothing here yet</span>

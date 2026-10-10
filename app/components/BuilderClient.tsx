@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
 import ElementStylePanel from "@/app/components/ElementStylePanel";
 import CmsManager from "@/app/components/CmsManager";
-import { injectPreviewInspector, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
+import { injectPreviewInspector, patchElementDelete, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
 import { injectCmsContent, normalizeCmsData, toCmsJson } from "@/lib/cms";
 import type { CmsData } from "@/lib/cms";
+import ImageAttachments from "@/app/components/ImageAttachments";
+import { parseImageAttachments, type ImageAttachment } from "@/lib/image-attachments";
 import { signOut } from "next-auth/react";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
@@ -50,6 +52,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<Project | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [draftImages, setDraftImages] = useState<ImageAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -61,6 +64,8 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   const previewRef = useRef<HTMLIFrameElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selection, setSelection] = useState<SelectedElement | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingElement, setDeletingElement] = useState(false);
   const [savingStyle, setSavingStyle] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
@@ -105,9 +110,11 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   useEffect(() => {
     function handlePreviewMessage(event: MessageEvent<unknown>) {
       if (event.source !== previewRef.current?.contentWindow || !event.data || typeof event.data !== "object") return;
+      if (deletingElement) return;
       const data = event.data as { type?: unknown; payload?: unknown };
       if (previewMode === "edit" && data.type === "foundry:select" && isSelectedElement(data.payload)) {
         setSelection(data.payload);
+        setDeleteError("");
         setActivePanel("preview");
         return;
       }
@@ -145,7 +152,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
     window.addEventListener("message", handlePreviewMessage);
     return () => window.removeEventListener("message", handlePreviewMessage);
-  }, [previewMode, project, projectId]);
+  }, [deletingElement, previewMode, project, projectId]);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -227,6 +234,44 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
     }, 600);
   }
 
+  async function handleDeleteElement() {
+    if (!project || !selection || savingStyle) return;
+    const elementName = selection.id ? `${selection.tagName}#${selection.id}` : selection.tagName;
+    if (!window.confirm(`Delete the selected ${elementName}? This can't be undone.`)) return;
+
+    const html = patchElementDelete(project.html, selection.selector);
+    if (html === project.html) {
+      setDeleteError("Could not delete the selected element.");
+      return;
+    }
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    setDeleteError("");
+    setDeletingElement(true);
+    setSavingStyle(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html }),
+      });
+      const result = (await response.json()) as { error?: string; project?: Project };
+      if (!response.ok || !result.project) {
+        throw new Error(result.error || "Could not delete the selected element.");
+      }
+      setProject(result.project);
+      setSelection(null);
+    } catch (reason) {
+      setDeleteError(reason instanceof Error ? reason.message : "Could not delete the selected element.");
+    } finally {
+      setDeletingElement(false);
+      setSavingStyle(false);
+    }
+  }
+
   async function handlePublish() {
     setPublishing(true);
     setPublishError("");
@@ -282,13 +327,14 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
     setMessages(result.messages);
   }, [projectId]);
 
-  const sendPrompt = useCallback(async (content: string) => {
-    if (!content || generating) return;
+  const sendPrompt = useCallback(async (content: string, attachments: ImageAttachment[] = []) => {
+    const messageContent = content.trim() || (attachments.length ? "Use the attached image(s) to build my website." : "");
+    if (!messageContent || generating) return;
     const pendingId = `pending-${Date.now()}`;
     const pendingMessage: ChatMessage = {
       id: pendingId,
       role: "user",
-      content,
+      content: messageContent,
       created_date: new Date().toISOString(),
     };
     setMessages((current) => [...current, pendingMessage]);
@@ -300,7 +346,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
       const response = await fetch(`/api/projects/${projectId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({ message: messageContent, images: attachments }),
       });
       const result = (await response.json()) as {
         error?: string;
@@ -318,9 +364,10 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
         result.assistantMessage!,
       ]);
       setProject(result.project);
+      setDraftImages([]);
     } catch (reason) {
       setMessages((current) => current.filter((message) => message.id !== pendingId));
-      setDraft(content);
+      setDraft(messageContent);
       setError(reason instanceof Error ? reason.message : "The website could not be updated.");
       void refreshMessages();
     } finally {
@@ -331,17 +378,32 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   useEffect(() => {
     if (loading || !project || messages.length > 0 || initialPromptStartedRef.current) return;
     const storageKey = `foundry:initial-prompt:${projectId}`;
-    const initialPrompt = window.sessionStorage.getItem(storageKey)?.trim();
-    if (!initialPrompt) return;
+    const storedPrompt = window.sessionStorage.getItem(storageKey);
+    if (!storedPrompt) return;
+
+    let initialPrompt = "";
+    let initialImages: ImageAttachment[] = [];
+    try {
+      const parsed: unknown = JSON.parse(storedPrompt);
+      if (parsed && typeof parsed === "object" && "message" in parsed && typeof parsed.message === "string") {
+        initialPrompt = parsed.message.trim();
+        initialImages = parseImageAttachments("images" in parsed ? parsed.images : undefined) ?? [];
+      } else if (typeof parsed === "string") {
+        initialPrompt = parsed.trim();
+      }
+    } catch {
+      initialPrompt = storedPrompt.trim();
+    }
+    if (!initialPrompt && !initialImages.length) return;
 
     initialPromptStartedRef.current = true;
     window.sessionStorage.removeItem(storageKey);
-    window.setTimeout(() => void sendPrompt(initialPrompt), 0);
+    window.setTimeout(() => void sendPrompt(initialPrompt, initialImages), 0);
   }, [loading, messages.length, project, projectId, sendPrompt]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void sendPrompt(draft.trim());
+    void sendPrompt(draft.trim(), draftImages);
   }
 
   if (loading) {
@@ -377,8 +439,6 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className={`h-2 w-2 rounded-full ${generating ? "animate-pulse bg-amber-500" : "bg-emerald-500"}`} />
-          {generating ? "Building" : "Saved"}
           <Button
             variant="ghost"
             size="sm"
@@ -522,9 +582,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 placeholder="Describe your website or ask for a change…"
                 className="max-h-40 min-h-19 w-full resize-none bg-transparent px-3.5 pt-3 text-sm outline-none placeholder:text-muted-foreground/80 disabled:opacity-60"
               />
+              <div className="px-3">
+                <ImageAttachments images={draftImages} onChange={setDraftImages} disabled={generating} compact />
+              </div>
               <div className="flex items-center justify-between gap-3 px-3 pb-2.5">
                 <span className="text-[10px] text-muted-foreground">Enter to send · Shift + Enter for a new line</span>
-                <Button type="submit" size="icon" aria-label="Send message" disabled={generating || !draft.trim()} className="h-8 w-8 rounded-full">
+                <Button type="submit" size="icon" aria-label="Send message" disabled={generating || (!draft.trim() && !draftImages.length)} className="h-8 w-8 rounded-full">
                   {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
@@ -588,7 +651,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                   srcDoc={injectPreviewInspector(injectCmsContent(project.html, project.cms_data))}
                   sandbox="allow-scripts allow-forms allow-popups"
                   onLoad={restorePreviewSelection}
-                  className="h-full w-full rounded-lg border border-border bg-white shadow-sm [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb"
+                  className={`h-full w-full rounded-lg border border-border bg-white shadow-sm [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb ${deletingElement ? "pointer-events-none" : ""}`}
                 />
               </div>
             ) : (
@@ -613,7 +676,13 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
               saving={savingStyle}
               onChange={handleStyleChange}
               onImageUrlChange={handleImageUrlChange}
-              onClose={() => setSelection(null)}
+              onDelete={() => void handleDeleteElement()}
+              deleting={deletingElement}
+              deleteError={deleteError}
+              onClose={() => {
+                setSelection(null);
+                setDeleteError("");
+              }}
             />
           </section>
         )}

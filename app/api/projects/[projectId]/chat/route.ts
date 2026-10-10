@@ -3,6 +3,7 @@ import type { Database } from "@/lib/database.types";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
 import { normalizeCmsData, toCmsJson } from "@/lib/cms";
+import { parseImageAttachments } from "@/lib/image-attachments";
 import { baseprompt } from "./prompt";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
@@ -100,6 +101,17 @@ export async function POST(request: Request, { params }: RouteContext) {
   ) {
     return NextResponse.json({ error: "Enter a request of 1 to 8,000 characters." }, { status: 400 });
   }
+  const attachments = parseImageAttachments("images" in body ? body.images : undefined);
+  if (!attachments) {
+    return NextResponse.json({ error: "Images must be WebP files, up to 1 MB each and 1.5 MB total." }, { status: 400 });
+  }
+  const usedImages = attachments.filter((image) => image.intent === "use");
+  const attachmentInstructions = attachments.length
+    ? `\n\nAttached images and intent:\n${attachments.map((image, index) =>
+      `${index + 1}. ${image.name}: ${image.intent === "use" ? `use this exact image on the website with marker LUNIO_UPLOADED_IMAGE_${index}` : "visual reference only"}`
+    ).join("\n")}`
+    : "";
+  const savedMessage = `${body.message.trim()}${attachments.length ? `\n\n[Attached ${attachments.length} image${attachments.length === 1 ? "" : "s"}: ${attachments.map((image) => `${image.name} (${image.intent})`).join(", ")}]` : ""}`;
 
   const { projectId } = await params;
   const supabase = getSupabaseAdmin();
@@ -130,7 +142,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       project_id: projectId,
       owner_id: ownerId,
       role: "user",
-      content: body.message.trim(),
+      content: savedMessage,
     })
     .select("*")
     .single();
@@ -162,13 +174,19 @@ export async function POST(request: Request, { params }: RouteContext) {
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [
           ...history,
-          { role: "user", parts: [{ text: body.message.trim() }] },
+          {
+            role: "user",
+            parts: [
+              { text: `${body.message.trim()}${attachmentInstructions}` },
+              ...attachments.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } })),
+            ],
+          },
         ],
         generationConfig: {
           responseFormat: {
             text: { mimeType: "APPLICATION_JSON", schema: RESPONSE_SCHEMA },
           },
-          maxOutputTokens: 12000,
+          maxOutputTokens: 24000,
         },
       }),
       signal: AbortSignal.timeout(90000),
@@ -216,13 +234,27 @@ export async function POST(request: Request, { params }: RouteContext) {
     )
     .join("");
 
+  const finishReason =
+    firstCandidate && typeof firstCandidate === "object" && "finishReason" in firstCandidate &&
+    typeof firstCandidate.finishReason === "string"
+      ? firstCandidate.finishReason
+      : null;
+
+  if (finishReason === "MAX_TOKENS") {
+    return NextResponse.json(
+      { error: "The AI response was cut off before the website was complete. Try again with a shorter request." },
+      { status: 502 }
+    );
+  }
+
   if (!content.trim()) {
     return NextResponse.json({ error: "Gemini returned an empty response. Please try again." }, { status: 502 });
   }
 
   let update: unknown;
   try {
-    update = JSON.parse(content);
+    const jsonContent = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    update = JSON.parse(jsonContent);
   } catch {
     return NextResponse.json({ error: "The AI returned an invalid website update. Please try again." }, { status: 502 });
   }
@@ -231,7 +263,14 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "The AI returned an invalid or oversized website." }, { status: 502 });
   }
 
-  const html = update.html.trim();
+  let html = update.html.trim();
+  usedImages.forEach((image) => {
+    const index = attachments.indexOf(image);
+    html = html.replaceAll(`LUNIO_UPLOADED_IMAGE_${index}`, `data:image/webp;base64,${image.data}`);
+  });
+  if (html.length > 6000000) {
+    return NextResponse.json({ error: "The generated website with attached images is too large. Try smaller images." }, { status: 502 });
+  }
   const name = update.name.trim().slice(0, 120) || currentProject.name;
   const { data: updatedProject, error: updateError } = await supabase
     .from("projects")

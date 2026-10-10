@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { SelectedElement } from "@/lib/preview-inspector";
 
 const COLOR_FIELDS = [
@@ -39,16 +40,23 @@ export default function ElementStylePanel({
   saving,
   onChange,
   onImageUrlChange,
+  onDelete,
+  deleting,
+  deleteError,
   onClose,
 }: {
   selection: SelectedElement;
   saving: boolean;
   onChange: (property: string, value: string) => void;
   onImageUrlChange: (value: string) => void;
+  onDelete: () => void;
+  deleting: boolean;
+  deleteError: string;
   onClose: () => void;
 }) {
   const [draftStyles, setDraftStyles] = useState(selection.styles);
   const title = selection.id ? `${selection.tagName}#${selection.id}` : selection.tagName;
+  const canDelete = !["html", "head", "body"].includes(selection.tagName.toLowerCase());
 
   function updateStyle(property: string, value: string) {
     setDraftStyles((current) => ({ ...current, [property]: value }));
@@ -82,6 +90,7 @@ export default function ElementStylePanel({
                 type="url"
                 value={selection.imageUrl}
                 onChange={(event) => onImageUrlChange(event.target.value)}
+                disabled={deleting}
                 placeholder="https://example.com/image.jpg"
                 aria-label="Image URL"
                 className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -96,6 +105,7 @@ export default function ElementStylePanel({
                   type="color"
                   value={colorPickerValue(draftStyles[field.property])}
                   onChange={(event) => updateStyle(field.property, event.target.value)}
+                  disabled={deleting}
                   aria-label={`${field.label} picker`}
                   className="h-9 w-11 shrink-0 cursor-pointer rounded-md border border-input bg-background p-1"
                 />
@@ -103,6 +113,7 @@ export default function ElementStylePanel({
                   type="text"
                   value={draftStyles[field.property] ?? ""}
                   onChange={(event) => updateStyle(field.property, event.target.value)}
+                  disabled={deleting}
                   placeholder="#000000 or transparent"
                   aria-label={`${field.label} CSS value`}
                   className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -116,6 +127,7 @@ export default function ElementStylePanel({
               <input
                 value={draftStyles[field.property] ?? ""}
                 onChange={(event) => updateStyle(field.property, event.target.value)}
+                disabled={deleting}
                 placeholder={field.placeholder}
                 aria-label={field.label}
                 className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -125,8 +137,21 @@ export default function ElementStylePanel({
         </div>
       </div>
 
-      <footer className="shrink-0 border-t border-border/70 px-4 py-3 text-xs text-muted-foreground">
-        {saving ? "Saving changes…" : "Changes save automatically"}
+      <footer className="shrink-0 space-y-2 border-t border-border/70 px-4 py-3">
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="w-full gap-2"
+          aria-label={`Delete selected ${title}`}
+          title={canDelete ? "Delete selected element" : "The document structure cannot be deleted"}
+          disabled={saving || deleting || !canDelete}
+          onClick={onDelete}
+        >
+          <Trash2 className="h-4 w-4" /> {deleting ? "Deleting…" : "Delete element"}
+        </Button>
+        {deleteError && <p role="alert" className="text-xs text-destructive">{deleteError}</p>}
+        <p className="text-xs text-muted-foreground">{saving ? "Saving changes…" : "Changes save automatically"}</p>
       </footer>
     </aside>
   );

@@ -7,6 +7,41 @@ export type Json =
   | Json[];
 
 export type Database = {
+  next_auth: {
+    Tables: {
+      users: {
+        Row: {
+          id: string;
+          name: string | null;
+          email: string | null;
+          emailVerified: string | null;
+          image: string | null;
+          role: string;
+        };
+        Insert: {
+          id?: string;
+          name?: string | null;
+          email?: string | null;
+          emailVerified?: string | null;
+          image?: string | null;
+          role?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string | null;
+          email?: string | null;
+          emailVerified?: string | null;
+          image?: string | null;
+          role?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
   public: {
     Tables: {
       projects: {
