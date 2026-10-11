@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { ArrowUpRight, Menu, PanelsTopLeft, Rocket, User, X } from "lucide-react";
+import { Menu, Rocket, User, X } from "lucide-react";
 import { SignOut } from "../login/SignOutButton";
 import type { Session } from "next-auth";
 
@@ -29,7 +29,7 @@ export default function AppHeader({ user }: { user?: NonNullable<Session["user"]
           <Link href="/builder" className="text-white">FAQ</Link>
           <Link href="/builder" className="text-white">Pricing</Link>
           <Link href="/builder" className="text-white">Templates</Link>
-          <Link href="/builder" className="text-white">Services</Link>
+          <Link href="/#services" className="text-white">Services</Link>
           <Link href="/builder" className="text-white">Documentation</Link>
           {activeUser && <Link href="/dashboard" className="text-white">My Websites</Link>}
         </nav>

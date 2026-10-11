@@ -1,4 +1,5 @@
 import AppHeader from "./components/AppHeader";
+import Services from "./components/home/Services";
 import { SessionProvider } from "next-auth/react";
 import PromptTextArea from "./components/PromptTextArea";
 import { ArrowUpRight, Check } from "lucide-react";
@@ -35,6 +36,7 @@ export default function HomePage() {
             <div><span>03</span> Refine it with LUNIO</div>
           </section>
         </main>
+        <Services />
       </SessionProvider>
     </div>
   );

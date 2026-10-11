@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { SessionProvider, signIn } from 'next-auth/react'
 import GoogleSignInButton from './GoogleSignInButton'
+import GitHubSignInButton from './GitHubSignInButton'
+import DiscordSignInButton from './DiscordSignInButton'
 import { Check } from 'lucide-react'
 import AppHeader from '../components/AppHeader'
 
@@ -49,6 +51,8 @@ const page = () => {
 
             <div className="flex flex-col gap-4">
               <GoogleSignInButton />
+              <GitHubSignInButton />
+              <DiscordSignInButton />
             </div>
 
             <p className="mt-6 text-sm text-gray-400">
