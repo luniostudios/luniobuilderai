@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { LayoutDashboard, Settings } from "lucide-react";
 import type { Session } from "next-auth";
 import type { Database } from "@/lib/database.types";
-import ProjectCard from "@/app/components/ProjectCard";
+import ProjectCard from "@/app/components/dashboard/ProjectCard";
 import ProfileSettings from "./ProfileSettings";
 import type { UserRole } from "@/lib/project-limits";
 

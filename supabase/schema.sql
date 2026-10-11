@@ -76,6 +76,7 @@ create table if not exists public.projects (
   name text not null default 'Untitled site',
   html text not null default '',
   cms_data jsonb not null default '{"collections": []}'::jsonb,
+  site_metadata jsonb not null default '{"title":"","description":"","keywords":"","author":"","faviconUrl":"","socialImageUrl":"","themeColor":""}'::jsonb,
   published_slug text,
   published_at timestamptz,
   created_date timestamptz not null default now(),
@@ -85,6 +86,7 @@ create table if not exists public.projects (
 alter table public.projects add column if not exists published_slug text;
 alter table public.projects add column if not exists published_at timestamptz;
 alter table public.projects add column if not exists cms_data jsonb not null default '{"collections": []}'::jsonb;
+alter table public.projects add column if not exists site_metadata jsonb not null default '{"title":"","description":"","keywords":"","author":"","faviconUrl":"","socialImageUrl":"","themeColor":""}'::jsonb;
 
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),

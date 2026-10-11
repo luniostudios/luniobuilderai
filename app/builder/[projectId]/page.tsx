@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import BuilderClient from "../../components/BuilderClient";
+import BuilderClient from "../../components/builder/BuilderClient";
 
 export default async function BuilderPage({
   params,

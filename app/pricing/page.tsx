@@ -1,4 +1,4 @@
-import AppHeader from '../components/AppHeader'
+import AppHeader from '../components/home/AppHeader'
 import { auth } from "../../lib/auth"
 import Footer from '../components/home/Footer'
 import { Suspense } from 'react';

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { Suspense } from 'react'
 import type { Session } from 'next-auth'
-import UserAvatar from '../login/UserAvatar'
+import UserAvatar from '../../login/UserAvatar'
 import { BarChart, LayoutDashboard, Menu, Rocket, Settings, User } from 'lucide-react'
 import {
     Popover,
@@ -10,7 +10,7 @@ import {
     PopoverHeader,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { SignOut } from '../login/SignOutButton'
+import { SignOut } from '../../login/SignOutButton'
 
 type AppHeaderProps = {
     user?: Session['user'] | null

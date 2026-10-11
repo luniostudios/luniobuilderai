@@ -51,6 +51,7 @@ export type Database = {
           name: string;
           html: string;
           cms_data: Json;
+          site_metadata: Json;
           published_slug: string | null;
           published_at: string | null;
           created_date: string;
@@ -62,6 +63,7 @@ export type Database = {
           name?: string;
           html?: string;
           cms_data?: Json;
+          site_metadata?: Json;
           published_slug?: string | null;
           published_at?: string | null;
           created_date?: string;
@@ -73,6 +75,7 @@ export type Database = {
           name?: string;
           html?: string;
           cms_data?: Json;
+          site_metadata?: Json;
           published_slug?: string | null;
           published_at?: string | null;
           created_date?: string;

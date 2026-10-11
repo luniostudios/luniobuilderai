@@ -5,12 +5,14 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { ArrowLeft, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Triangle, Settings, Loader, ChevronDown, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
-import ElementStylePanel from "@/app/components/ElementStylePanel";
-import CmsManager from "@/app/components/CmsManager";
+import ElementStylePanel from "@/app/components/builder/ElementStylePanel";
+import CmsManager from "@/app/components/builder/CmsManager";
+import ProjectSettings from "@/app/components/builder/ProjectSettings";
 import { injectPreviewInspector, patchElementDelete, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
 import { injectCmsContent, normalizeCmsData, toCmsJson } from "@/lib/cms";
+import { injectSiteMetadata } from "@/lib/site-metadata";
 import type { CmsData } from "@/lib/cms";
-import ImageAttachments from "@/app/components/ImageAttachments";
+import ImageAttachments from "@/app/components/home/ImageAttachments";
 import { parseImageAttachments, type ImageAttachment } from "@/lib/image-attachments";
 import { signOut } from "next-auth/react";
 import { IconBrandVercel } from "@tabler/icons-react";
@@ -19,7 +21,7 @@ type Project = Database["public"]["Tables"]["projects"]["Row"];
 type StoredMessage = Database["public"]["Tables"]["messages"]["Row"];
 type ChatMessage = Pick<StoredMessage, "id" | "role" | "content" | "created_date">;
 type ActivePanel = "chat" | "preview";
-type BuilderView = "website" | "cms";
+type BuilderView = "website" | "cms" | "settings";
 type PreviewMode = "edit" | "preview";
 type Breakpoint = "desktop" | "tablet" | "mobile";
 
@@ -659,10 +661,26 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           <DatabaseIcon className="h-4 w-4" /> CMS
           {(normalizeCmsData(project.cms_data)?.collections.length ?? 0) > 0 && <span className="text-xs tabular-nums">{normalizeCmsData(project.cms_data)?.collections.length}</span>}
         </button>
+        <button
+          type="button"
+          aria-pressed={builderView === "settings"}
+          onClick={() => setBuilderView("settings")}
+          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "settings" ? " font-medium" : "border-transparent"}`}
+        >
+          <Settings className="h-4 w-4" /> Settings
+        </button>
       </nav>
 
       {builderView === "cms" ? (
         <CmsManager key={project.updated_date} value={project.cms_data} onSave={saveCmsData} />
+      ) : builderView === "settings" ? (
+        <ProjectSettings
+          project={project}
+          onProjectUpdated={(updatedProject) => {
+            setProject(updatedProject);
+            setError("");
+          }}
+        />
       ) : <>
         <nav aria-label="Builder panels" className={`h-11 shrink-0 border-b border-border/70 lg:hidden ${previewMode === "edit" ? "flex" : "hidden"}`}>
           <button
@@ -817,7 +835,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     ref={previewRef}
                     key={project.updated_date}
                     title={`${project.name} live preview`}
-                    srcDoc={injectPreviewInspector(injectCmsContent(project.html, project.cms_data))}
+                    srcDoc={injectPreviewInspector(injectSiteMetadata(injectCmsContent(project.html, project.cms_data), project.site_metadata, project.name))}
                     sandbox="allow-scripts allow-forms allow-popups"
                     onLoad={restorePreviewSelection}
                     className={`h-full w-full rounded-lg border border-border bg-white shadow-sm [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb ${deletingElement ? "pointer-events-none" : ""}`}

@@ -4,8 +4,8 @@ import { auth } from "@/lib/auth";
 import type { Database } from "@/lib/database.types";
 import { getSupabaseAdmin } from "@/lib/db";
 import { getUserProjectLimit } from "@/lib/project-limits";
-import Dashboard from "@/app/components/Dashboard";
-import AppHeader from "../components/AppHeader";
+import Dashboard from "@/app/components/dashboard/Dashboard";
+import AppHeader from "../components/home/AppHeader";
 
 export default async function DashboardPage({
   searchParams,

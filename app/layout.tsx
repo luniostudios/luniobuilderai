@@ -19,6 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.luniobuilder.com"),
   title: "LUNIO Builder - Create and Edit Websites Fast with AI",
   description: "Describe the website you want and LUNIO Builder generates with AI an editable site in the visual editor.",
   keywords: [
@@ -40,6 +41,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://www.luniobuilder.com",
   },
+  openGraph: {
+    type: "website",
+    siteName: "LUNIO Builder",
+    title: "LUNIO Builder - Create and Edit Websites Fast with AI",
+    description: "Describe the website you want and LUNIO Builder generates with AI an editable site in the visual editor.",
+    images: [{ url: "/socials/og.png", width: 1200, height: 630, alt: "LUNIO Builder" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LUNIO Builder - Create and Edit Websites Fast with AI",
+    description: "Describe the website you want and LUNIO Builder generates with AI an editable site in the visual editor.",
+    images: ["/socials/og.png"],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -50,16 +64,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       suppressHydrationWarning
     >
       <head>
-        <meta property="og:image" content="/socials/og.png" />
-        <meta property="og:image:alt" content="LUNIO Builder" />
-        <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="twitter:image" content="/socials/og.png" />
-        <meta property="twitter:image:alt" content="LUNIO Builder" />
-        <meta property="twitter:image:type" content="image/png" />
-        <meta property="twitter:image:width" content="1200" />
-        <meta property="twitter:image:height" content="630" />
         <link rel="preconnect" href="https://challenges.cloudflare.com" />
         <link rel="icon" type="image/x-icon" href="/icons/logo.ico" />
       </head>

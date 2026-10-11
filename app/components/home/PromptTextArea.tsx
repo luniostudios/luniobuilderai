@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowRight, ArrowUp, Loader2 } from "lucide-react";
 import type { Database } from "@/lib/database.types";
-import ImageAttachments from "@/app/components/ImageAttachments";
+import ImageAttachments from "@/app/components/home/ImageAttachments";
 import type { ImageAttachment } from "@/lib/image-attachments";
 import { Button } from "@/components/ui/button";
 

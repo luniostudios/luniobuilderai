@@ -1,7 +1,7 @@
-import AppHeader from "./components/AppHeader";
+import AppHeader from "./components/home/AppHeader";
 import Services from "./components/home/Services";
 import { SessionProvider } from "next-auth/react";
-import PromptTextArea from "./components/PromptTextArea";
+import PromptTextArea from "./components/home/PromptTextArea";
 import { ArrowUpRight, Check } from "lucide-react";
 import Templates from "./components/home/Templates";
 import Footer from "./components/home/Footer";
