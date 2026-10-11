@@ -7,9 +7,15 @@ import { getUserProjectLimit } from "@/lib/project-limits";
 import Dashboard from "@/app/components/Dashboard";
 import AppHeader from "../components/AppHeader";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+
   const session = await auth();
   if (!session?.user) redirect("/login?callbackUrl=%2Fdashboard");
+  const { tab } = await searchParams;
 
   const [projectsResult, accountLimit] = await Promise.all([
     getSupabaseAdmin()
@@ -28,10 +34,12 @@ export default async function DashboardPage() {
     <SessionProvider session={session}>
       <AppHeader user={session.user} />
       <Dashboard
+        key={tab === "settings" ? "settings" : "projects"}
         user={session.user}
         initialProjects={projects}
         role={accountLimit.role}
         maxProjects={accountLimit.limit}
+        initialTab={tab === "settings" ? "settings" : "projects"}
       />
     </SessionProvider>
   );

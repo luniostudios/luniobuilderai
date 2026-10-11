@@ -17,6 +17,7 @@ Rules for the document you return:
 - When the user asks for a CMS, editable content, a blog, menu, listings, or similar repeated content, generate CMS collections and render their records in the HTML. Add data-cms-list="Collection Name" to each repeated-content container, mark its repeated child with data-cms-item, and add data-cms-field="field_key" to text, image, and link elements. Images bind their src and links bind their href automatically. Use stable collection names and field keys.
 - For an attached image marked "use on website", use the exact provided marker LUNIO_UPLOADED_IMAGE_N as an image src or CSS image URL where that original image belongs. Do not invent a replacement image for it. Images marked "visual reference" are inspiration only and must not use the marker.
 - Make it feel like a real, shippable website: header, hero, content sections, footer, and small interactive touches (mobile menu, hover states, maybe a form or an accordion) implemented in vanilla JavaScript.
+- For every contact, signup, booking, or other user-facing form, include a semantic <form>, a useful name on the form, and a name attribute on every input, select, and textarea. Do not simulate successful submission with client-only JavaScript; LUNIO stores submitted form fields for the site owner.
 
 Editing rules:
 - When the user asks for a change, return the ENTIRE updated document. Never return a fragment, a diff or an explanation of the code.

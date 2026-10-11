@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { LayoutDashboard, Settings } from "lucide-react";
 import type { Session } from "next-auth";
 import type { Database } from "@/lib/database.types";
-import { Button } from "@/components/ui/button";
-import AppHeader from "@/app/components/AppHeader";
 import ProjectCard from "@/app/components/ProjectCard";
-import PromptTextArea from "./PromptTextArea";
+import ProfileSettings from "./ProfileSettings";
 import type { UserRole } from "@/lib/project-limits";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
@@ -19,17 +18,19 @@ export default function Dashboard({
   initialProjects,
   role,
   maxProjects,
+  initialTab,
 }: {
   user: User;
   initialProjects: Project[];
   role: UserRole;
   maxProjects: number | null;
+  initialTab: "projects" | "settings";
 }) {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
-  const [prompt, setPrompt] = useState("");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const atProjectLimit = maxProjects !== null && projects.length >= maxProjects;
 
   async function createProject(initialPrompt?: string) {
@@ -80,26 +81,51 @@ export default function Dashboard({
           </div>
         </div>
 
-        {error && <p role="alert" className="mt-6 text-sm text-destructive">{error}</p>}
-        <div className="mt-10">
-          {projects.length === 0 ? (
-            <button
-              type="button"
-              onClick={() => void createProject()}
-              disabled={creating || atProjectLimit}
-              className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-border bg-white px-8 py-20 text-center transition-colors hover:border-brand/40 hover:bg-brand/5"
-            >
-              <span className="font-heading text-base font-semibold">Nothing here yet</span>
-              <span className="max-w-sm text-sm text-muted-foreground">Click here to create your first website.</span>
-            </button>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} onDelete={deleteProject} />
-              ))}
+        <nav aria-label="Dashboard sections" className="mt-8 flex gap-2 border-b border-border">
+          <Link
+            href="/dashboard?tab=projects"
+            onClick={() => setActiveTab("projects")}
+            aria-current={activeTab === "projects" ? "page" : undefined}
+            className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm transition-colors ${activeTab === "projects" ? "border-brand" : "border-transparent"}`}
+          >
+            <LayoutDashboard size={16} /> Projects
+          </Link>
+          <Link
+            href="/dashboard?tab=settings"
+            onClick={() => setActiveTab("settings")}
+            aria-current={activeTab === "settings" ? "page" : undefined}
+            className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm transition-colors ${activeTab === "settings" ? "border-brand" : "border-transparent"}`}
+          >
+            <Settings size={16} /> Profile settings
+          </Link>
+        </nav>
+
+        {activeTab === "settings" ? (
+          <ProfileSettings name={user.name ?? ""} image={user.image ?? ""} />
+        ) : (
+          <>
+            {error && <p role="alert" className="mt-6 text-sm text-destructive">{error}</p>}
+            <div className="mt-10">
+              {projects.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void createProject()}
+                  disabled={creating || atProjectLimit}
+                  className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-border bg-white px-8 py-20 text-center transition-colors hover:border-brand/40 hover:bg-brand/5"
+                >
+                  <span className="font-heading text-base font-semibold">Nothing here yet</span>
+                  <span className="max-w-sm text-sm text-muted-foreground">Click here to create your first website.</span>
+                </button>
+              ) : (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {projects.map((project) => (
+                    <ProjectCard key={project.id} project={project} onDelete={deleteProject} />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </main>
     </div>
   );
