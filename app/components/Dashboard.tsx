@@ -54,13 +54,6 @@ export default function Dashboard({
     }
   }
 
-  function handleGenerate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const initialPrompt = prompt.trim();
-    if (!initialPrompt || creating) return;
-    void createProject(initialPrompt);
-  }
-
   async function deleteProject(project: Project) {
     if (!window.confirm(`Delete "${project.name}"? This can't be undone.`)) return;
     setError("");
@@ -73,12 +66,11 @@ export default function Dashboard({
   }
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <AppHeader user={user} />
+    <div className="min-h-screen bg-white text-black py-30">
       <main className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-3">
-            <h1 className="font-display text-4xl leading-tight sm:text-5xl">Your websites</h1>
+            <h1 className="font-bold text-4xl leading-tight sm:text-5xl">Welcome, {user.name}</h1>
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
             Start with a sentence. Then keep asking — new sections, different colours, another page.
             </p>
@@ -86,23 +78,19 @@ export default function Dashboard({
               {role} plan · {projects.length} / {maxProjects ?? "Unlimited"} websites
             </p>
           </div>
-          <Button size="lg" variant="outline" onClick={() => void createProject()} disabled={creating || atProjectLimit} className="gap-2 rounded-full px-6">
-            + New website
-          </Button>
         </div>
 
         {error && <p role="alert" className="mt-6 text-sm text-destructive">{error}</p>}
-        <PromptTextArea limitReached={atProjectLimit} />
         <div className="mt-10">
           {projects.length === 0 ? (
             <button
               type="button"
               onClick={() => void createProject()}
               disabled={creating || atProjectLimit}
-              className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border bg-background/60 px-8 py-20 text-center transition-colors hover:border-brand/40 hover:bg-brand/5"
+              className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-border bg-white px-8 py-20 text-center transition-colors hover:border-brand/40 hover:bg-brand/5"
             >
               <span className="font-heading text-base font-semibold">Nothing here yet</span>
-              <span className="max-w-sm text-sm text-muted-foreground">Create your first website.</span>
+              <span className="max-w-sm text-sm text-muted-foreground">Click here to create your first website.</span>
             </button>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

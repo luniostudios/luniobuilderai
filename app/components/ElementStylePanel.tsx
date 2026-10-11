@@ -331,7 +331,7 @@ function ElementStylePanelContent({
   }
 
   return (
-    <aside aria-label="Element styles" className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+    <aside aria-label="Element styles" className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/70 px-4 py-3">
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Selected element</p>
@@ -360,7 +360,7 @@ function ElementStylePanelContent({
                 disabled={deleting}
                 placeholder="https://example.com/image.jpg"
                 aria-label="Image URL"
-                className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               />
             </label>
           )}
@@ -378,7 +378,7 @@ function ElementStylePanelContent({
                       onChange={(event) => updateStyle(field.property, event.target.value)}
                       disabled={deleting}
                       aria-label={`${field.label} picker`}
-                      className="h-9 w-11 shrink-0 cursor-pointer rounded-md border border-input bg-background p-1"
+                      className="h-9 w-11 shrink-0 cursor-pointer rounded-md border border-input p-1"
                     />
                     <input
                       type="text"
@@ -388,7 +388,7 @@ function ElementStylePanelContent({
                       disabled={deleting}
                       placeholder="CSS color, e.g. #000 or transparent"
                       aria-label={`${field.label} CSS value`}
-                      className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className="h-9 min-w-0 flex-1 rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     />
                   </span>
                 </label>
@@ -409,7 +409,7 @@ function ElementStylePanelContent({
                       onKeyDown={commitOnEnter}
                       placeholder={field.placeholder ?? ""}
                       aria-label={field.label}
-                      className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     />
                   </label>
                 ))}
@@ -447,7 +447,7 @@ function ElementStylePanelContent({
                         disabled={deleting}
                         placeholder="e.g. clip-path or --brand-color"
                         aria-label={`CSS property ${index + 1}`}
-                        className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                       />
                     </label>
                     <button
@@ -455,7 +455,7 @@ function ElementStylePanelContent({
                       onClick={() => removeCustomProperty(item)}
                       disabled={deleting}
                       aria-label="Remove CSS property"
-                      className="mt-5 rounded-md p-2 text-muted-foreground hover:bg-background hover:text-foreground"
+                      className="mt-5 rounded-md p-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -472,12 +472,12 @@ function ElementStylePanelContent({
                       disabled={deleting || !item.property}
                       placeholder="Enter a CSS value"
                       aria-label={`CSS value ${index + 1}`}
-                      className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     />
                   </label>
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" className="w-full gap-2" onClick={addCustomProperty} disabled={deleting}>
+              <Button type="button" size="sm" className="w-full gap-2" onClick={addCustomProperty} disabled={deleting}>
                 <Plus className="h-4 w-4" /> Add CSS property
               </Button>
               {propertyError && <p role="alert" className="text-xs text-destructive">{propertyError}</p>}

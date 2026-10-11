@@ -25,8 +25,11 @@ export async function getUserProjectLimit(
     .select("role")
     .eq("id", userId)
     .maybeSingle();
+
   if (error) return { error: "Could not load account role." };
   if (!data || !isUserRole(data.role)) return { error: "Account has an unsupported role." };
 
-  return { role: data.role, limit: PROJECT_LIMITS[data.role] };
+  const role = data.role as UserRole;
+
+  return { role, limit: PROJECT_LIMITS[role] };
 }

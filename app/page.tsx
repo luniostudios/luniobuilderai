@@ -3,6 +3,9 @@ import Services from "./components/home/Services";
 import { SessionProvider } from "next-auth/react";
 import PromptTextArea from "./components/PromptTextArea";
 import { ArrowUpRight, Check } from "lucide-react";
+import Templates from "./components/home/Templates";
+import Footer from "./components/home/Footer";
+import FAQ from "./components/home/FAQ";
 
 export default function HomePage() {
   return (
@@ -37,6 +40,9 @@ export default function HomePage() {
           </section>
         </main>
         <Services />
+        <Templates/>
+        <FAQ />
+        <Footer />
       </SessionProvider>
     </div>
   );

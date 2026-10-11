@@ -5,6 +5,8 @@ import type { Database } from "@/lib/database.types";
 import { getSupabaseAdmin } from "@/lib/db";
 import { getUserProjectLimit } from "@/lib/project-limits";
 import Dashboard from "@/app/components/Dashboard";
+import App from "next/app";
+import AppHeader from "../components/AppHeader";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -25,6 +27,7 @@ export default async function DashboardPage() {
   const projects = projectsResult.data as unknown as Database["public"]["Tables"]["projects"]["Row"][];
   return (
     <SessionProvider session={session}>
+      <AppHeader user={session.user} />
       <Dashboard
         user={session.user}
         initialProjects={projects}

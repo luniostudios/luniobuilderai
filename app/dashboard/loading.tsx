@@ -1,6 +1,6 @@
 export default function DashboardLoading() {
   return (
-    <main className="min-h-screen bg-canvas" role="status" aria-label="Loading dashboard">
+    <main className="min-h-screen bg-white" role="status" aria-label="Loading dashboard">
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-3">

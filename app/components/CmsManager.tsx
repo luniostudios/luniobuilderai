@@ -65,7 +65,7 @@ export default function CmsManager({ value, onSave }: Props) {
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
+    <section className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="mx-auto w-full max-w-5xl px-5 py-7 sm:px-8">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/70 pb-5">
           <div className="flex items-start gap-3">
@@ -74,7 +74,7 @@ export default function CmsManager({ value, onSave }: Props) {
             </span>
             <div>
               <h2 className="font-heading text-xl font-semibold">Content collections</h2>
-              <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">Manage the content your generated website uses. Ask the builder to create a CMS for a blog, menu, team, or other repeatable content.</p>
+              <p className="mt-1 max-w-xl text-sm leading-relaxed">Manage the content your generated website uses. Ask the builder to create a CMS for a blog, menu, team, or other repeatable content.</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -90,15 +90,15 @@ export default function CmsManager({ value, onSave }: Props) {
         <div className="grid min-h-104 grid-cols-1 gap-7 py-6 md:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="space-y-4 border-b border-border/70 pb-5 md:border-b-0 md:border-r md:pb-0 md:pr-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Collections</h3>
-              <span className="text-xs tabular-nums text-muted-foreground">{data.collections.length}</span>
+              <h3 className="text-xs font-semibold uppercase tracking-wide">Collections</h3>
+              <span className="text-xs tabular-nums">{data.collections.length}</span>
             </div>
             {data.collections.map((collection) => (
               <button
                 key={collection.id}
                 type="button"
                 onClick={() => setSelectedId(collection.id)}
-                className={`flex min-h-10 w-full items-center justify-between gap-2 border-l-2 px-3 text-left text-sm ${selectedId === collection.id ? "border-emerald-700 bg-emerald-700/5 font-medium text-foreground" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
+                className={`flex min-h-10 w-full items-center justify-between gap-2 border-l-2 px-3 text-left text-sm ${selectedId === collection.id ? "border-emerald-700 bg-emerald-700/5 font-medium" : "border-transparent  hover:bg-muted/60"}`}
               >
                 <span className="truncate">{collection.name}</span>
                 <span className="text-xs tabular-nums">{collection.items.length}</span>
@@ -106,11 +106,11 @@ export default function CmsManager({ value, onSave }: Props) {
             ))}
             <div className="space-y-2 border-t border-border/70 pt-4">
               <label className="block text-xs font-medium" htmlFor="new-collection-name">New collection</label>
-              <input id="new-collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} placeholder="e.g. Journal" className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input id="new-collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} placeholder="e.g. Journal" className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <label className="block text-xs font-medium" htmlFor="new-collection-fields">Fields</label>
-              <input id="new-collection-fields" value={fieldDefinitions} onChange={(event) => setFieldDefinitions(event.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-              <p className="text-[11px] leading-relaxed text-muted-foreground">Separate fields with commas. Optional types: text, image, url, date.</p>
-              <Button variant="outline" size="sm" className="w-full gap-2" onClick={addCollection} disabled={!collectionName.trim()}>
+              <input id="new-collection-fields" value={fieldDefinitions} onChange={(event) => setFieldDefinitions(event.target.value)} className="h-9 w-full rounded-md border border-input px-2.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <p className="text-[11px] leading-relaxed">Separate fields with commas. Optional types: text, image, url, date.</p>
+              <Button size="sm" className="w-full gap-2" onClick={addCollection} disabled={!collectionName.trim()}>
                 <Plus className="h-4 w-4" /> Add collection
               </Button>
             </div>
@@ -121,10 +121,10 @@ export default function CmsManager({ value, onSave }: Props) {
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-heading text-lg font-semibold">{selected.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{selected.items.length} {selected.items.length === 1 ? "record" : "records"} · {selected.fields.length} fields</p>
+                  <p className="mt-1 text-xs">{selected.items.length} {selected.items.length === 1 ? "record" : "records"} · {selected.fields.length} fields</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2" onClick={addItem}>
+                  <Button size="sm" className="gap-2" onClick={addItem}>
                     <FilePlus2 className="h-4 w-4" /> Add record
                   </Button>
                   <Button
@@ -148,7 +148,7 @@ export default function CmsManager({ value, onSave }: Props) {
                   {selected.items.map((item, index) => (
                     <article key={item.id} className="border border-border/80 p-4">
                       <div className="mb-3 flex items-center justify-between">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Record {index + 1}</h4>
+                        <h4 className="text-xs font-semibold uppercase tracking-wide">Record {index + 1}</h4>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -173,7 +173,7 @@ export default function CmsManager({ value, onSave }: Props) {
                                   : entry),
                               }))}
                               placeholder={field.type === "image" ? "https://..." : field.label}
-                              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              className="h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           </label>
                         ))}
@@ -183,17 +183,17 @@ export default function CmsManager({ value, onSave }: Props) {
                 </div>
               ) : (
                 <div className="flex min-h-48 flex-col items-center justify-center border border-dashed border-border px-6 text-center">
-                  <FilePlus2 className="mb-3 h-5 w-5 text-muted-foreground" />
+                  <FilePlus2 className="mb-3 h-5 w-5" />
                   <p className="text-sm font-medium">No records yet</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Add the first record to this collection.</p>
+                  <p className="mt-1 text-xs">Add the first record to this collection.</p>
                 </div>
               )}
             </div>
           ) : (
             <div className="flex min-h-64 flex-col items-center justify-center px-4 text-center">
-              <Database className="mb-3 h-6 w-6 text-muted-foreground" />
+              <Database className="mb-3 h-6 w-6" />
               <p className="text-sm font-medium">Your content starts here</p>
-              <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">Create a collection, or ask the builder to generate a site with CMS-managed content.</p>
+              <p className="mt-1 max-w-sm text-xs leading-relaxed">Create a collection, or ask the builder to generate a site with CMS-managed content.</p>
             </div>
           )}
         </div>

@@ -448,8 +448,8 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
   if (loading) {
     return (
-      <main className="flex h-screen items-center justify-center bg-background">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading project" />
+      <main className="flex h-screen items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin" aria-label="Loading project" />
       </main>
     );
   }
@@ -457,20 +457,20 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   if (!project) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas">
-        <p className="text-sm text-muted-foreground">{error || "This website doesn't exist anymore."}</p>
+        <p className="text-sm">{error || "This website doesn't exist anymore."}</p>
         <a href="/dashboard" className="text-sm font-medium text-primary hover:underline">Back to your websites</a>
       </main>
     );
   }
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-background">
+    <main className="flex h-dvh flex-col overflow-hidden bg-white text-black dark:bg-black dark:text-white">
       <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border/70 px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/dashboard"
             aria-label="Back to projects"
-            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-full p-2 transition-colors hover:bg-muted"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -478,18 +478,17 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
             <h1 className="truncate font-heading text-sm font-semibold">{project.name}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs">
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 text-muted-foreground hover:text-foreground"
+            className="gap-2"
             onClick={() => signOut({ callbackUrl: "/login" })}
           >
             <LogOut className="h-4 w-4" />
             Sign out
           </Button>
           <Button
-            variant="outline"
             size="sm"
             className="gap-2"
             onClick={() => {
@@ -509,11 +508,11 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 href={`/sites/${project.published_slug}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-9 items-center gap-2 rounded-md px-3 text-foreground transition-colors hover:bg-muted"
+                className="inline-flex h-9 items-center gap-2 rounded-md px-3 transition-colors hover:bg-muted"
               >
                 <ExternalLink className="h-4 w-4" /> View site
               </a>
-              <Button variant="outline" size="sm" onClick={handleUnpublish} disabled={publishing}>
+              <Button size="sm" onClick={handleUnpublish} disabled={publishing}>
                 {publishing ? "Unpublishing..." : "Unpublish"}
               </Button>
             </>
@@ -535,12 +534,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="vercel-deploy-title"
-            className="w-full max-w-md rounded-xl border border-border bg-background p-5 shadow-xl"
+            className="w-full max-w-md rounded-xl bg-white border border-border p-5 shadow-xl"
           >
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <h2 id="vercel-deploy-title" className="font-heading text-base font-semibold">Deploy to Vercel</h2>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-1 text-sm leading-relaxed">
                   Deploy this website as a static site in your Vercel account.
                 </p>
               </div>
@@ -549,7 +548,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 aria-label="Close Vercel deployment dialog"
                 onClick={closeVercelDialog}
                 disabled={vercelDeploying}
-                className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                className="rounded-full p-1.5 disabled:opacity-50"
               >
                 <span aria-hidden="true">×</span>
               </button>
@@ -565,7 +564,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 >
                   {vercelDeploymentUrl}
                 </a>
-                <p className="text-xs leading-relaxed text-muted-foreground">
+                <p className="text-xs leading-relaxed">
                   Vercel may take a moment to finish activating the site.
                 </p>
                 <div className="flex justify-end">
@@ -585,11 +584,11 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     maxLength={512}
                     disabled={vercelDeploying}
                     placeholder="Paste a Vercel access token"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   />
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium">Team ID <span className="font-normal text-muted-foreground">(optional)</span></span>
+                  <span className="text-sm font-medium">Team ID <span className="font-normal">(optional)</span></span>
                   <input
                     value={vercelTeamId}
                     onChange={(event) => setVercelTeamId(event.target.value)}
@@ -597,10 +596,10 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     maxLength={128}
                     disabled={vercelDeploying}
                     placeholder="Use your personal account if blank"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   />
                 </label>
-                <p className="text-xs leading-relaxed text-muted-foreground">
+                <p className="text-xs leading-relaxed">
                   Create a token in{" "}
                   <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer" className="underline underline-offset-2">
                     Vercel account settings
@@ -609,7 +608,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 </p>
                 {vercelError && <p role="alert" className="text-sm text-destructive">{vercelError}</p>}
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={closeVercelDialog} disabled={vercelDeploying}>Cancel</Button>
+                  <Button type="button" onClick={closeVercelDialog} disabled={vercelDeploying}>Cancel</Button>
                   <Button type="submit" disabled={!vercelToken.trim() || vercelDeploying}>
                     {vercelDeploying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deploying…</> : "Deploy"}
                   </Button>
@@ -625,7 +624,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           type="button"
           aria-pressed={builderView === "website"}
           onClick={() => setBuilderView("website")}
-          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "website" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "website" ? " font-medium" : "border-transparent "}`}
         >
           <Monitor className="h-4 w-4" /> Website
         </button>
@@ -633,10 +632,10 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           type="button"
           aria-pressed={builderView === "cms"}
           onClick={() => setBuilderView("cms")}
-          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "cms" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "cms" ? " font-medium" : "border-transparent"}`}
         >
           <DatabaseIcon className="h-4 w-4" /> CMS
-          {(normalizeCmsData(project.cms_data)?.collections.length ?? 0) > 0 && <span className="text-xs tabular-nums text-muted-foreground">{normalizeCmsData(project.cms_data)?.collections.length}</span>}
+          {(normalizeCmsData(project.cms_data)?.collections.length ?? 0) > 0 && <span className="text-xs tabular-nums">{normalizeCmsData(project.cms_data)?.collections.length}</span>}
         </button>
       </nav>
 
@@ -648,7 +647,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           type="button"
           aria-pressed={activePanel === "chat"}
           onClick={() => setActivePanel("chat")}
-          className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "chat" ? "border-b-2 border-foreground font-medium" : "text-muted-foreground"}`}
+          className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "chat" ? "border-b-2 font-medium" : ""}`}
         >
           <MessageSquare className="h-4 w-4" /> Chat
         </button>
@@ -656,7 +655,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           type="button"
           aria-pressed={activePanel === "preview"}
           onClick={() => setActivePanel("preview")}
-          className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "preview" ? "border-b-2 border-foreground font-medium" : "text-muted-foreground"}`}
+          className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "preview" ? "border-b-2 font-medium" : ""}`}
         >
           <Monitor className="h-4 w-4" /> Preview
         </button>
@@ -672,7 +671,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     <Sparkles className="h-5 w-5" />
                   </span>
                   <h2 className="font-display text-3xl leading-tight">What are we making?</h2>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
+                  <p className="text-sm leading-relaxed">
                     Describe your site, audience, and style. I’ll build the page and keep refining it with you.
                   </p>
                 </div>
@@ -682,7 +681,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                       key={suggestion}
                       type="button"
                       onClick={() => setDraft(suggestion)}
-                      className="w-full rounded-xl border border-border/70 px-3.5 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-brand/40 hover:bg-brand/5 hover:text-foreground"
+                      className="w-full rounded-xl border border-border/70 px-3.5 py-3 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brand/5"
                     >
                       {suggestion}
                     </button>
@@ -693,16 +692,16 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
               <div className="space-y-5">
                 {messages.map((message) => (
                   <article key={message.id} className={message.role === "user" ? "ml-7" : "mr-4"}>
-                    <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">
+                    <p className="mb-1.5 text-[11px] font-medium">
                       {message.role === "user" ? "You" : "LUNIO Builder"}
                     </p>
-                    <div className={`rounded-2xl px-3.5 py-3 text-sm leading-relaxed ${message.role === "user" ? "rounded-br-md bg-foreground text-background" : "rounded-bl-md bg-muted/70 text-foreground"}`}>
+                    <div className={`rounded-2xl px-3.5 py-3 text-sm leading-relaxed ${message.role === "user" ? "rounded-br-md bg-black text-white" : "rounded-bl-md bg-muted/70"}`}>
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     </div>
                   </article>
                 ))}
                 {generating && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                  <div className="flex items-center gap-2 text-sm" role="status">
                     <Loader2 className="h-4 w-4 animate-spin" /> Designing your website…
                   </div>
                 )}
@@ -713,7 +712,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
           {error && <p role="alert" className="px-4 pb-2 text-xs leading-relaxed text-destructive">{error}</p>}
           <form onSubmit={handleSubmit} className="shrink-0 border-t border-border/70 p-3 sm:p-4">
-            <div className="rounded-2xl border border-border/80 bg-background transition-colors focus-within:border-brand/50">
+            <div className="rounded-2xl border border-border/80 transition-colors focus-within:border-brand/50">
               <textarea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
@@ -728,13 +727,13 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 disabled={generating}
                 aria-label="Describe a website or request an edit"
                 placeholder="Describe your website or ask for a change…"
-                className="max-h-40 min-h-19 w-full resize-none bg-transparent px-3.5 pt-3 text-sm outline-none placeholder:text-muted-foreground/80 disabled:opacity-60"
+                className="max-h-40 min-h-19 w-full resize-none bg-transparent px-3.5 pt-3 text-sm outline-none  disabled:opacity-60"
               />
               <div className="px-3">
                 <ImageAttachments images={draftImages} onChange={setDraftImages} disabled={generating} compact />
               </div>
               <div className="flex items-center justify-between gap-3 px-3 pb-2.5">
-                <span className="text-[10px] text-muted-foreground">Enter to send · Shift + Enter for a new line</span>
+                <span className="text-[10px]">Enter to send · Shift + Enter for a new line</span>
                 <Button type="submit" size="icon" aria-label="Send message" disabled={generating || (!draft.trim() && !draftImages.length)} className="h-8 w-8 rounded-full">
                   {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
@@ -746,12 +745,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
         <section className={`min-h-0 flex-col bg-canvas ${previewMode === "preview" || activePanel === "preview" ? "flex" : "hidden"} ${previewMode === "edit" ? "lg:flex" : ""}`}>
           <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-center gap-2 border-b border-border/70 px-3 py-1.5 sm:px-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <div role="group" aria-label="Website mode" className="flex shrink-0 items-center rounded-md border border-border bg-background p-0.5">
+              <div role="group" aria-label="Website mode" className="flex shrink-0 items-center rounded-md border border-border p-0.5">
                 <button
                   type="button"
                   aria-pressed={previewMode === "edit"}
                   onClick={() => setPreviewMode("edit")}
-                  className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "edit" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "edit" ? "" : ""}`}
                 >
                   <Pencil className="h-3.5 w-3.5" /> Edit
                 </button>
@@ -762,12 +761,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     setSelection(null);
                     setPreviewMode("preview");
                   }}
-                  className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "preview" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "preview" ? "" : ""}`}
                 >
                   <Eye className="h-3.5 w-3.5" /> Preview
                 </button>
               </div>
-              <div role="group" aria-label="Preview breakpoint" className="flex shrink-0 items-center rounded-md border border-border bg-background p-0.5">
+              <div role="group" aria-label="Preview breakpoint" className="flex shrink-0 items-center rounded-md border border-border p-0.5">
                 {BREAKPOINTS.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
@@ -776,13 +775,13 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     aria-pressed={breakpoint === id}
                     title={`${label} preview`}
                     onClick={() => setBreakpoint(id)}
-                    className={`flex h-8 w-9 items-center justify-center rounded-sm transition-colors ${breakpoint === id ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`flex h-8 w-9 items-center justify-center rounded-sm transition-colors ${breakpoint === id ? "" : ""}`}
                   >
                     <Icon className="h-4 w-4" />
                   </button>
                 ))}
               </div>
-              <span className=" text-right text-[11px] tabular-nums text-muted-foreground">
+              <span className=" text-right text-[11px] tabular-nums">
                 {BREAKPOINTS.find((item) => item.id === breakpoint)?.width === "100%"
                   ? "Full width"
                   : `${BREAKPOINTS.find((item) => item.id === breakpoint)?.width}px`}
@@ -803,13 +802,13 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 />
               </div>
             ) : (
-              <div className="flex h-full min-h-64 items-center justify-center rounded-lg border border-dashed border-border bg-background/60 px-8 text-center">
+              <div className="flex h-full min-h-64 items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
                 <div className="max-w-sm space-y-3">
                   <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-brand">
                     <Monitor className="h-5 w-5" />
                   </span>
                   <p className="font-heading text-sm font-semibold">Your website will appear here</p>
-                  <p className="text-sm leading-relaxed text-muted-foreground">Send a description in the chat to generate the first version.</p>
+                  <p className="text-sm leading-relaxed">Send a description in the chat to generate the first version.</p>
                 </div>
               </div>
             )}

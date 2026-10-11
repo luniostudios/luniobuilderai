@@ -1,25 +1,82 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 import { Roboto } from "next/font/google";
 import "./globals.css";
+import Link from "next/link";
 
 const roboto = Roboto({
   variable: "--font-roboto",
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "LUNIO Builder - Create, Generate or Build Websites with AI",
-  description: "Create, Generate or Build Website with AI",
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111114" },
+  ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export const metadata: Metadata = {
+  title: "LUNIO Builder - Create and Edit Websites Fast with AI",
+  description: "Describe the website you want and LUNIO Builder generates with AI an editable site in the visual editor.",
+  keywords: [
+    "LUNIO Builder",
+    "no-code website builder",
+    "drag-and-drop website builder",
+    "website builder",
+    "create websites without coding",
+    "visual editor",
+    "AI website generator",
+    "AI website builder",
+    "AI website design",
+    "AI web design",
+    "AI web development",
+    "AI web generator",
+    "AI web creation",
+    "AI web editor",
+  ],
+  alternates: {
+    canonical: "https://www.luniobuilder.com",
+  },
+};
+
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html
       lang="en"
       className={`${roboto.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <head>
+        <meta property="og:image" content="/socials/og.png" />
+        <meta property="og:image:alt" content="LUNIO Builder" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="twitter:image" content="/socials/og.png" />
+        <meta property="twitter:image:alt" content="LUNIO Builder" />
+        <meta property="twitter:image:type" content="image/png" />
+        <meta property="twitter:image:width" content="1200" />
+        <meta property="twitter:image:height" content="630" />
+        <link rel="preconnect" href="https://challenges.cloudflare.com" />
+        <link rel="icon" type="image/x-icon" href="/icons/logo.ico" />
+      </head>
+      <body className="min-h-full flex flex-col">
+        <Link href="https://discord.gg/WwmW6Mgaxn" target='blank' className='fixed z-20 bottom-23 right-5 max-md:right-3 text-white border justify-center border-white/20 rounded-full px-3 py-3 items-center gap-2 bg-[#5865F2] hover:bg-[#5865F2]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+          <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0,0,256,256">
+            <g fill="#ffffff" fillRule="nonzero" stroke="none" strokeWidth="1" strokeLinecap="butt" strokeLinejoin="miter" strokeMiterlimit="10" strokeDasharray="" strokeDashoffset="0" fontFamily="none" fontWeight="none" fontSize="none"><g transform="scale(5.12,5.12)"><path d="M41.625,10.76953c-3.98047,-3.20313 -10.27734,-3.74609 -10.54687,-3.76563c-0.41797,-0.03516 -0.81641,0.19922 -0.98828,0.58594c-0.01562,0.02344 -0.15234,0.33984 -0.30469,0.83203c2.63281,0.44531 5.86719,1.33984 8.79297,3.15625c0.46875,0.28906 0.61328,0.90625 0.32422,1.375c-0.19141,0.30859 -0.51562,0.47656 -0.85156,0.47656c-0.17969,0 -0.36328,-0.05078 -0.52734,-0.15234c-5.03125,-3.12109 -11.3125,-3.27734 -12.52344,-3.27734c-1.21094,0 -7.49609,0.15625 -12.52344,3.27734c-0.46875,0.29297 -1.08594,0.14844 -1.375,-0.32031c-0.29297,-0.47266 -0.14844,-1.08594 0.32031,-1.37891c2.92578,-1.8125 6.16016,-2.71094 8.79297,-3.15234c-0.15234,-0.49609 -0.28906,-0.80859 -0.30078,-0.83594c-0.17578,-0.38672 -0.57031,-0.62891 -0.99219,-0.58594c-0.26953,0.01953 -6.56641,0.5625 -10.60156,3.80859c-2.10547,1.94922 -6.32031,13.33984 -6.32031,23.1875c0,0.17578 0.04688,0.34375 0.13281,0.49609c2.90625,5.10938 10.83984,6.44531 12.64844,6.50391c0.00781,0 0.01953,0 0.03125,0c0.32031,0 0.62109,-0.15234 0.80859,-0.41016l1.82813,-2.51562c-4.93359,-1.27344 -7.45312,-3.4375 -7.59766,-3.56641c-0.41406,-0.36328 -0.45312,-0.99609 -0.08594,-1.41016c0.36328,-0.41406 0.99609,-0.45312 1.41016,-0.08984c0.05859,0.05469 4.69922,3.99219 13.82422,3.99219c9.14063,0 13.78125,-3.95312 13.82813,-3.99219c0.41406,-0.35937 1.04297,-0.32422 1.41016,0.09375c0.36328,0.41406 0.32422,1.04297 -0.08984,1.40625c-0.14453,0.12891 -2.66406,2.29297 -7.59766,3.56641l1.82813,2.51563c0.1875,0.25781 0.48828,0.41016 0.80859,0.41016c0.01172,0 0.02344,0 0.03125,0c1.80859,-0.05859 9.74219,-1.39453 12.64844,-6.50391c0.08594,-0.15234 0.13281,-0.32031 0.13281,-0.49609c0,-9.84766 -4.21484,-21.23828 -6.375,-23.23047zM18.5,30c-1.93359,0 -3.5,-1.78906 -3.5,-4c0,-2.21094 1.56641,-4 3.5,-4c1.93359,0 3.5,1.78906 3.5,4c0,2.21094 -1.56641,4 -3.5,4zM31.5,30c-1.93359,0 -3.5,-1.78906 -3.5,-4c0,-2.21094 1.56641,-4 3.5,-4c1.93359,0 3.5,1.78906 3.5,4c0,2.21094 -1.56641,4 -3.5,4z"></path></g></g>
+          </svg>
+        </Link>
+        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            window.$crisp=[];window.CRISP_WEBSITE_ID="f49a14fc-d01b-432a-a6b5-2b9d5c0ae78f";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();`,
+          }}
+        />
+      </body>
     </html>
   );
 }

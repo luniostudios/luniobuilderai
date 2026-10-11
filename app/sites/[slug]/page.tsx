@@ -4,7 +4,11 @@ import { connection } from "next/server";
 import { getSupabaseAdmin } from "@/lib/db";
 import { injectCmsContent } from "@/lib/cms";
 
-export default function PublishedSitePage({ params }: PageProps<"/sites/[slug]">) {
+export default function PublishedSitePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   return (
     <Suspense fallback={<main className="fixed inset-0 bg-white" />}>
       <PublishedSite params={params} />
