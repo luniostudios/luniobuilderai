@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { Suspense } from 'react'
 import type { Session } from 'next-auth'
 import UserAvatar from '../../login/UserAvatar'
-import { BarChart, LayoutDashboard, Menu, Rocket, Settings, User } from 'lucide-react'
+import { LayoutDashboard, Menu, Rocket, Settings, User } from 'lucide-react'
 import {
     Popover,
     PopoverContent,
@@ -62,7 +62,7 @@ function NavigationLinks() {
         <>
             <li><Link href="/#faq" className='text-gray-400 hover:text-gray-300 transition-colors'>FAQ</Link></li>
             <li><Link href="/pricing" className='text-gray-400 hover:text-gray-300 transition-colors'>Pricing</Link></li>
-            <li className='items-align-middle'><Link href="/#templates" className='flex flex-row gap-2 text-gray-400 hover:text-gray-300 transition-colors'>Examples</Link></li>
+            <li><Link href="/#examples" className='text-gray-400 hover:text-gray-300 transition-colors'>Examples</Link></li>
             <li><Link href="/#services" className='text-gray-400 hover:text-gray-300 transition-colors'>Services</Link></li>
             <li><Link href="/documentation" className='text-gray-400 hover:text-gray-300 transition-colors'>Documentation</Link></li>
         </>

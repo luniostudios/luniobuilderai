@@ -6,11 +6,11 @@ type Project = Pick<Database['public']['Tables']['projects']['Row'], 'id' | 'nam
 const Templates = ({ projects }: { projects: Project[] }) => {
   return (
     <>
-      <section id='templates' aria-labelledby='templates-title' className='w-full border-t border-black/10 bg-[#f6f6f4] px-5 py-20 text-[#171a16] sm:px-8 sm:py-28'>
+      <section id='examples' aria-labelledby='templates-title' className='w-full border-t border-black/10 bg-[#f6f6f4] px-5 py-20 text-[#171a16] sm:px-8 sm:py-28'>
         <div className='mx-auto max-w-6xl'>
           <div className='max-w-3xl'>
             <h2 id='templates-title' className='mt-4 text-3xl font-semibold leading-tight sm:text-5xl'>
-              Recently published projects.
+              Examples of websites built with LUNIO Builder
             </h2>
             <p className='mt-5 text-base leading-7 text-[#555b53] sm:text-lg'>
               Explore the latest websites created with LUNIO Builder.
