@@ -3,9 +3,9 @@ import { getSupabaseAdmin } from "@/lib/db";
 export type UserRole = "FREE" | "PRO" | "BUSINESS" | "STAFF" | "ADMIN" | "MANAGER" | "OWNER";
 
 export const PROJECT_LIMITS: Record<UserRole, number | null> = {
-  FREE: 1,
-  PRO: 5,
-  BUSINESS: 25,
+  FREE: 3,
+  PRO: 25,
+  BUSINESS: 100,
   STAFF: null,
   ADMIN: null,
   MANAGER: null,

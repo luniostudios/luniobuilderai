@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Triangle } from "lucide-react";
+import { ArrowLeft, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Triangle, Settings, Loader, ChevronDown, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
 import ElementStylePanel from "@/app/components/ElementStylePanel";
@@ -13,6 +13,7 @@ import type { CmsData } from "@/lib/cms";
 import ImageAttachments from "@/app/components/ImageAttachments";
 import { parseImageAttachments, type ImageAttachment } from "@/lib/image-attachments";
 import { signOut } from "next-auth/react";
+import { IconBrandVercel } from "@tabler/icons-react";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type StoredMessage = Database["public"]["Tables"]["messages"]["Row"];
@@ -76,6 +77,9 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   const [vercelError, setVercelError] = useState("");
   const [vercelDeploymentUrl, setVercelDeploymentUrl] = useState("");
   const initialPromptStartedRef = useRef(false);
+  const [showPublishMenu, setShowPublishMenu] = useState(false);
+  const [published, setPublished] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -466,60 +470,78 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   return (
     <main className="flex h-dvh flex-col overflow-hidden bg-white text-black dark:bg-black dark:text-white">
       <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border/70 px-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link
-            href="/dashboard"
-            aria-label="Back to projects"
-            className="rounded-full p-2 transition-colors hover:bg-muted"
-          >
-            <ArrowLeft className="h-4 w-4" />
+        <div className="flex flex-row items-center gap-2">
+          <Link href="/dashboard" className="flex flex-row items-center gap-1 text-sm font-medium text-primary hover:underline">
+            <ChevronLeft size={16} />
           </Link>
-          <div className="min-w-0">
-            <h1 className="truncate font-heading text-sm font-semibold">{project.name}</h1>
-          </div>
+          <span className="font-bold">{project?.name || 'Untitled'}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => {
-              setVercelError("");
-              setVercelDeploymentUrl("");
-              setShowVercelDialog(true);
-            }}
-            disabled={!project.html.trim() || savingStyle}
-          >
-            <Triangle className="h-3.5 w-3.5 fill-current" />
-            <span className="hidden sm:inline">Deploy to Vercel</span>
-            <span className="sm:hidden">Vercel</span>
-          </Button>
-          {project.published_slug ? (
-            <>
-              <a
-                href={`/sites/${project.published_slug}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-9 items-center gap-2 rounded-md px-3 transition-colors hover:bg-muted"
+        {/* Publish */}
+        <div className="relative">
+          <div className="flex items-center">
+            <button
+              onClick={() => setShowPublishMenu(!showPublishMenu)}
+              disabled={isPublishing}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-medium transition-all ${published
+                ? 'bg-green-600 text-white'
+                : 'bg-black text-white'
+                } ${isPublishing ? 'opacity-70 cursor-wait' : ''}`}
+            >
+              {isPublishing ? (
+                <>
+                  <Loader size={12} />
+                  Publishing...
+                </>
+              ) : published ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse" />
+                  Published!
+                </>
+              ) : (
+                <>
+                  Publish
+                  <ChevronDown size={14} />
+                </>
+              )}
+            </button>
+          </div>
+
+          {showPublishMenu && (
+            <div className="absolute top-full right-0 mt-1 px-4 w-48 bg-black border border-gray-700 rounded-sm shadow-2xl py-2 z-50">
+              <button
+                onClick={published ? handleUnpublish : handlePublish}
+                disabled={!project || isPublishing}
+                className={`w-full flex items-center gap-2 px-2 py-2 text-xs ${project ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 cursor-not-allowed'} transition-colors`}
               >
-                <ExternalLink className="h-4 w-4" /> View site
-              </a>
-              <Button size="sm" onClick={handleUnpublish} disabled={publishing}>
-                {publishing ? "Unpublishing..." : "Unpublish"}
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" onClick={handlePublish} disabled={publishing || !project.html.trim() || savingStyle} className="gap-2 py-4">
-              <Globe className="h-4 w-4" /> {publishing ? "Publishing..." : "Publish"}
-            </Button>
+                <Globe size={12} />
+                Publish to LUNIO
+                {project.published_slug && (
+                    <a
+                      href={`/sites/${project.published_slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </button>
+              <button
+                onClick={() => setShowVercelDialog(true)}
+                className="w-full flex items-center gap-2 px-2 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <IconBrandVercel stroke={2} size={12} />
+                Publish to Vercel
+              </button>
+              <div className="border-t border-gray-800 mt-1 pt-1">
+                <Link
+                  href={`/dashboard/settings/${projectId}`}
+                  className="w-full flex items-center gap-2 px-2 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                >
+                  <Settings size={12} />
+                  Site settings
+                </Link>
+              </div>
+            </div>
           )}
         </div>
       </header>
@@ -604,7 +626,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                   <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer" className="underline underline-offset-2">
                     Vercel account settings
                   </a>
-                    . The token is used only for this deployment request and is not saved by LUNIO.
+                  . The token is used only for this deployment request and is not saved by LUNIO.
                 </p>
                 {vercelError && <p role="alert" className="text-sm text-destructive">{vercelError}</p>}
                 <div className="flex justify-end gap-2">
@@ -642,198 +664,198 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
       {builderView === "cms" ? (
         <CmsManager key={project.updated_date} value={project.cms_data} onSave={saveCmsData} />
       ) : <>
-      <nav aria-label="Builder panels" className={`h-11 shrink-0 border-b border-border/70 lg:hidden ${previewMode === "edit" ? "flex" : "hidden"}`}>
-        <button
-          type="button"
-          aria-pressed={activePanel === "chat"}
-          onClick={() => setActivePanel("chat")}
-          className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "chat" ? "border-b-2 font-medium" : ""}`}
-        >
-          <MessageSquare className="h-4 w-4" /> Chat
-        </button>
-        <button
-          type="button"
-          aria-pressed={activePanel === "preview"}
-          onClick={() => setActivePanel("preview")}
-          className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "preview" ? "border-b-2 font-medium" : ""}`}
-        >
-          <Monitor className="h-4 w-4" /> Preview
-        </button>
-      </nav>
+        <nav aria-label="Builder panels" className={`h-11 shrink-0 border-b border-border/70 lg:hidden ${previewMode === "edit" ? "flex" : "hidden"}`}>
+          <button
+            type="button"
+            aria-pressed={activePanel === "chat"}
+            onClick={() => setActivePanel("chat")}
+            className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "chat" ? "border-b-2 font-medium" : ""}`}
+          >
+            <MessageSquare className="h-4 w-4" /> Chat
+          </button>
+          <button
+            type="button"
+            aria-pressed={activePanel === "preview"}
+            onClick={() => setActivePanel("preview")}
+            className={`flex flex-1 items-center justify-center gap-2 text-sm ${activePanel === "preview" ? "border-b-2 font-medium" : ""}`}
+          >
+            <Monitor className="h-4 w-4" /> Preview
+          </button>
+        </nav>
 
-      <div className={`grid min-h-0 flex-1 ${previewMode === "preview" ? "grid-cols-1" : selection ? "lg:grid-cols-[minmax(280px,350px)_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]"}`}>
-        <section className={previewMode === "preview" ? "hidden" : `min-h-0 flex-col border-border/70 lg:flex lg:border-r ${activePanel === "chat" ? "flex" : "hidden"}`}>
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-5 [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb">
-            {messages.length === 0 ? (
-              <div className="my-auto space-y-7 py-8">
-                <div className="space-y-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
-                    <Sparkles className="h-5 w-5" />
-                  </span>
-                  <h2 className="font-display text-3xl leading-tight">What are we making?</h2>
-                  <p className="text-sm leading-relaxed">
-                    Describe your site, audience, and style. I’ll build the page and keep refining it with you.
-                  </p>
+        <div className={`grid min-h-0 flex-1 ${previewMode === "preview" ? "grid-cols-1" : selection ? "lg:grid-cols-[minmax(280px,350px)_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(320px,390px)_minmax(0,1fr)]"}`}>
+          <section className={previewMode === "preview" ? "hidden" : `min-h-0 flex-col border-border/70 lg:flex lg:border-r ${activePanel === "chat" ? "flex" : "hidden"}`}>
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-5 [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb">
+              {messages.length === 0 ? (
+                <div className="my-auto space-y-7 py-8">
+                  <div className="space-y-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
+                      <Sparkles className="h-5 w-5" />
+                    </span>
+                    <h2 className="font-display text-3xl leading-tight">What are we making?</h2>
+                    <p className="text-sm leading-relaxed">
+                      Describe your site, audience, and style. I’ll build the page and keep refining it with you.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {SUGGESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => setDraft(suggestion)}
+                        className="w-full rounded-xl border border-border/70 px-3.5 py-3 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brand/5"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {SUGGESTIONS.map((suggestion) => (
+              ) : (
+                <div className="space-y-5">
+                  {messages.map((message) => (
+                    <article key={message.id} className={message.role === "user" ? "ml-7" : "mr-4"}>
+                      <p className="mb-1.5 text-[11px] font-medium">
+                        {message.role === "user" ? "You" : "LUNIO Builder"}
+                      </p>
+                      <div className={`rounded-2xl px-3.5 py-3 text-sm leading-relaxed ${message.role === "user" ? "rounded-br-md bg-black text-white" : "rounded-bl-md bg-muted/70"}`}>
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                    </article>
+                  ))}
+                  {generating && (
+                    <div className="flex items-center gap-2 text-sm" role="status">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Designing your website…
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+
+            {error && <p role="alert" className="px-4 pb-2 text-xs leading-relaxed text-destructive">{error}</p>}
+            <form onSubmit={handleSubmit} className="shrink-0 border-t border-border/70 p-3 sm:p-4">
+              <div className="rounded-2xl border border-border/80 transition-colors focus-within:border-brand/50">
+                <textarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      event.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                  rows={3}
+                  maxLength={8000}
+                  disabled={generating}
+                  aria-label="Describe a website or request an edit"
+                  placeholder="Describe your website or ask for a change…"
+                  className="max-h-40 min-h-19 w-full resize-none bg-transparent px-3.5 pt-3 text-sm outline-none  disabled:opacity-60"
+                />
+                <div className="px-3">
+                  <ImageAttachments images={draftImages} onChange={setDraftImages} disabled={generating} compact />
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 pb-2.5">
+                  <span className="text-[10px]">Enter to send · Shift + Enter for a new line</span>
+                  <Button type="submit" size="icon" aria-label="Send message" disabled={generating || (!draft.trim() && !draftImages.length)} className="h-8 w-8 rounded-full">
+                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <section className={`min-h-0 flex-col bg-canvas ${previewMode === "preview" || activePanel === "preview" ? "flex" : "hidden"} ${previewMode === "edit" ? "lg:flex" : ""}`}>
+            <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-center gap-2 border-b border-border/70 px-3 py-1.5 sm:px-4">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div role="group" aria-label="Website mode" className="flex shrink-0 items-center rounded-md border border-border p-0.5">
+                  <button
+                    type="button"
+                    aria-pressed={previewMode === "edit"}
+                    onClick={() => setPreviewMode("edit")}
+                    className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "edit" ? "" : ""}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={previewMode === "preview"}
+                    onClick={() => {
+                      setSelection(null);
+                      setPreviewMode("preview");
+                    }}
+                    className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "preview" ? "" : ""}`}
+                  >
+                    <Eye className="h-3.5 w-3.5" /> Preview
+                  </button>
+                </div>
+                <div role="group" aria-label="Preview breakpoint" className="flex shrink-0 items-center rounded-md border border-border p-0.5">
+                  {BREAKPOINTS.map(({ id, label, icon: Icon }) => (
                     <button
-                      key={suggestion}
+                      key={id}
                       type="button"
-                      onClick={() => setDraft(suggestion)}
-                      className="w-full rounded-xl border border-border/70 px-3.5 py-3 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brand/5"
+                      aria-label={`${label} preview`}
+                      aria-pressed={breakpoint === id}
+                      title={`${label} preview`}
+                      onClick={() => setBreakpoint(id)}
+                      className={`flex h-8 w-9 items-center justify-center rounded-sm transition-colors ${breakpoint === id ? "" : ""}`}
                     >
-                      {suggestion}
+                      <Icon className="h-4 w-4" />
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {messages.map((message) => (
-                  <article key={message.id} className={message.role === "user" ? "ml-7" : "mr-4"}>
-                    <p className="mb-1.5 text-[11px] font-medium">
-                      {message.role === "user" ? "You" : "LUNIO Builder"}
-                    </p>
-                    <div className={`rounded-2xl px-3.5 py-3 text-sm leading-relaxed ${message.role === "user" ? "rounded-br-md bg-black text-white" : "rounded-bl-md bg-muted/70"}`}>
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                  </article>
-                ))}
-                {generating && (
-                  <div className="flex items-center gap-2 text-sm" role="status">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Designing your website…
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </div>
-
-          {error && <p role="alert" className="px-4 pb-2 text-xs leading-relaxed text-destructive">{error}</p>}
-          <form onSubmit={handleSubmit} className="shrink-0 border-t border-border/70 p-3 sm:p-4">
-            <div className="rounded-2xl border border-border/80 transition-colors focus-within:border-brand/50">
-              <textarea
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    event.currentTarget.form?.requestSubmit();
-                  }
-                }}
-                rows={3}
-                maxLength={8000}
-                disabled={generating}
-                aria-label="Describe a website or request an edit"
-                placeholder="Describe your website or ask for a change…"
-                className="max-h-40 min-h-19 w-full resize-none bg-transparent px-3.5 pt-3 text-sm outline-none  disabled:opacity-60"
-              />
-              <div className="px-3">
-                <ImageAttachments images={draftImages} onChange={setDraftImages} disabled={generating} compact />
-              </div>
-              <div className="flex items-center justify-between gap-3 px-3 pb-2.5">
-                <span className="text-[10px]">Enter to send · Shift + Enter for a new line</span>
-                <Button type="submit" size="icon" aria-label="Send message" disabled={generating || (!draft.trim() && !draftImages.length)} className="h-8 w-8 rounded-full">
-                  {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
+                <span className=" text-right text-[11px] tabular-nums">
+                  {BREAKPOINTS.find((item) => item.id === breakpoint)?.width === "100%"
+                    ? "Full width"
+                    : `${BREAKPOINTS.find((item) => item.id === breakpoint)?.width}px`}
+                </span>
               </div>
             </div>
-          </form>
-        </section>
-
-        <section className={`min-h-0 flex-col bg-canvas ${previewMode === "preview" || activePanel === "preview" ? "flex" : "hidden"} ${previewMode === "edit" ? "lg:flex" : ""}`}>
-          <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-center gap-2 border-b border-border/70 px-3 py-1.5 sm:px-4">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <div role="group" aria-label="Website mode" className="flex shrink-0 items-center rounded-md border border-border p-0.5">
-                <button
-                  type="button"
-                  aria-pressed={previewMode === "edit"}
-                  onClick={() => setPreviewMode("edit")}
-                  className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "edit" ? "" : ""}`}
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Edit
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={previewMode === "preview"}
-                  onClick={() => {
-                    setSelection(null);
-                    setPreviewMode("preview");
-                  }}
-                  className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "preview" ? "" : ""}`}
-                >
-                  <Eye className="h-3.5 w-3.5" /> Preview
-                </button>
-              </div>
-              <div role="group" aria-label="Preview breakpoint" className="flex shrink-0 items-center rounded-md border border-border p-0.5">
-                {BREAKPOINTS.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    aria-label={`${label} preview`}
-                    aria-pressed={breakpoint === id}
-                    title={`${label} preview`}
-                    onClick={() => setBreakpoint(id)}
-                    className={`flex h-8 w-9 items-center justify-center rounded-sm transition-colors ${breakpoint === id ? "" : ""}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </button>
-                ))}
-              </div>
-              <span className=" text-right text-[11px] tabular-nums">
-                {BREAKPOINTS.find((item) => item.id === breakpoint)?.width === "100%"
-                  ? "Full width"
-                  : `${BREAKPOINTS.find((item) => item.id === breakpoint)?.width}px`}
-              </span>
-            </div>
-          </div>
-          <div className="relative min-h-0 flex-1 overflow-auto p-3 sm:p-5 [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb">
-            {project.html ? (
-              <div className="mx-auto h-full" style={{ width: BREAKPOINTS.find((item) => item.id === breakpoint)?.width }}>
-                <iframe
-                  ref={previewRef}
-                  key={project.updated_date}
-                  title={`${project.name} live preview`}
-                  srcDoc={injectPreviewInspector(injectCmsContent(project.html, project.cms_data))}
-                  sandbox="allow-scripts allow-forms allow-popups"
-                  onLoad={restorePreviewSelection}
-                  className={`h-full w-full rounded-lg border border-border bg-white shadow-sm [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb ${deletingElement ? "pointer-events-none" : ""}`}
-                />
-              </div>
-            ) : (
-              <div className="flex h-full min-h-64 items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
-                <div className="max-w-sm space-y-3">
-                  <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-brand">
-                    <Monitor className="h-5 w-5" />
-                  </span>
-                  <p className="font-heading text-sm font-semibold">Your website will appear here</p>
-                  <p className="text-sm leading-relaxed">Send a description in the chat to generate the first version.</p>
+            <div className="relative min-h-0 flex-1 overflow-auto p-3 sm:p-5 [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb">
+              {project.html ? (
+                <div className="mx-auto h-full" style={{ width: BREAKPOINTS.find((item) => item.id === breakpoint)?.width }}>
+                  <iframe
+                    ref={previewRef}
+                    key={project.updated_date}
+                    title={`${project.name} live preview`}
+                    srcDoc={injectPreviewInspector(injectCmsContent(project.html, project.cms_data))}
+                    sandbox="allow-scripts allow-forms allow-popups"
+                    onLoad={restorePreviewSelection}
+                    className={`h-full w-full rounded-lg border border-border bg-white shadow-sm [&::-webkit-scrollbar]:w-2[&::-webkit-scrollbar-track]:bg-scrollbar-track [&::-webkit-scrollbar-thumb]:bg-scrollbar-thumb ${deletingElement ? "pointer-events-none" : ""}`}
+                  />
                 </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {selection && previewMode === "edit" && (
-          <section className="fixed inset-x-0 bottom-0 top-26 z-40 border-t border-border/70 shadow-2xl sm:left-auto sm:w-80 sm:border-l sm:border-t-0 lg:static lg:z-auto lg:h-full lg:w-auto lg:shadow-none overflow-auto">
-            <ElementStylePanel
-              key={selection.selector}
-              selection={selection}
-              saving={savingStyle}
-              onChange={handleStyleChange}
-              onImageUrlChange={handleImageUrlChange}
-              onDelete={() => void handleDeleteElement()}
-              deleting={deletingElement}
-              deleteError={deleteError}
-              onClose={() => {
-                setSelection(null);
-                setDeleteError("");
-              }}
-            />
+              ) : (
+                <div className="flex h-full min-h-64 items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
+                  <div className="max-w-sm space-y-3">
+                    <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-brand">
+                      <Monitor className="h-5 w-5" />
+                    </span>
+                    <p className="font-heading text-sm font-semibold">Your website will appear here</p>
+                    <p className="text-sm leading-relaxed">Send a description in the chat to generate the first version.</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
-        )}
-      </div>
+
+          {selection && previewMode === "edit" && (
+            <section className="fixed inset-x-0 bottom-0 top-26 z-40 border-t border-border/70 shadow-2xl sm:left-auto sm:w-80 sm:border-l sm:border-t-0 lg:static lg:z-auto lg:h-full lg:w-auto lg:shadow-none overflow-auto">
+              <ElementStylePanel
+                key={selection.selector}
+                selection={selection}
+                saving={savingStyle}
+                onChange={handleStyleChange}
+                onImageUrlChange={handleImageUrlChange}
+                onDelete={() => void handleDeleteElement()}
+                deleting={deletingElement}
+                deleteError={deleteError}
+                onClose={() => {
+                  setSelection(null);
+                  setDeleteError("");
+                }}
+              />
+            </section>
+          )}
+        </div>
       </>}
     </main>
   );

@@ -62,7 +62,7 @@ function NavigationLinks() {
         <>
             <li><Link href="/#faq" className='text-gray-400 hover:text-gray-300 transition-colors'>FAQ</Link></li>
             <li><Link href="/pricing" className='text-gray-400 hover:text-gray-300 transition-colors'>Pricing</Link></li>
-            <li className='items-align-middle'><Link href="/#templates" className='flex flex-row gap-2 text-gray-400 hover:text-gray-300 transition-colors'>Templates</Link></li>
+            <li className='items-align-middle'><Link href="/#templates" className='flex flex-row gap-2 text-gray-400 hover:text-gray-300 transition-colors'>Examples</Link></li>
             <li><Link href="/#services" className='text-gray-400 hover:text-gray-300 transition-colors'>Services</Link></li>
             <li><Link href="/documentation" className='text-gray-400 hover:text-gray-300 transition-colors'>Documentation</Link></li>
         </>
@@ -105,9 +105,6 @@ async function MobileMenu({ user }: AppHeaderProps) {
                         <Link href="/dashboard?tab=projects" className="flex felx-row mt-3 text-gray-400 hover:text-gray-300 transition-colors">
                             <LayoutDashboard size={16} className="inline-block mr-2" />
                             My Projects
-                        </Link>
-                        <Link href="" className="mt-3 flex flex-row items-center gap-2 text-gray-400 hover:text-gray-300 transition-colors">
-                            <span className="text-gray-400 line-through"><BarChart size={16} className="inline-block mr-2" />Analytics</span><span className="text-xs text-yellow-400 border border-yellow-400 bg-yellow-200/30 rounded-full px-2 py-0.5">coming soon</span>
                         </Link>
                         <Link href="/dashboard?tab=settings" className="mt-3 text-gray-400 hover:text-gray-300 transition-colors">
                             <Settings size={16} className="inline-block mr-2" />

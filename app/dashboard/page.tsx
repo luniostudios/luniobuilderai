@@ -5,7 +5,6 @@ import type { Database } from "@/lib/database.types";
 import { getSupabaseAdmin } from "@/lib/db";
 import { getUserProjectLimit } from "@/lib/project-limits";
 import Dashboard from "@/app/components/Dashboard";
-import App from "next/app";
 import AppHeader from "../components/AppHeader";
 
 export default async function DashboardPage() {

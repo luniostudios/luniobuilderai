@@ -136,6 +136,20 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (historyError) return NextResponse.json({ error: "Could not load chat history." }, { status: 500 });
 
+  const { data: generationAllowed, error: generationLimitError } = await supabase.rpc(
+    "reserve_daily_generation",
+    { p_owner_id: ownerId },
+  );
+  if (generationLimitError) {
+    return NextResponse.json({ error: "Could not verify your daily generation limit." }, { status: 500 });
+  }
+  if (!generationAllowed) {
+    return NextResponse.json(
+      { error: "Free accounts can use up to 5 AI generations per day. Your daily limit resets at midnight UTC." },
+      { status: 429 },
+    );
+  }
+
   const { data: userMessage, error: insertError } = await supabase
     .from("messages")
     .insert({

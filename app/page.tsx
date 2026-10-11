@@ -6,6 +6,8 @@ import { ArrowUpRight, Check } from "lucide-react";
 import Templates from "./components/home/Templates";
 import Footer from "./components/home/Footer";
 import FAQ from "./components/home/FAQ";
+import { getSupabaseAdmin } from "@/lib/db";
+import { Suspense } from "react";
 
 export default function HomePage() {
   return (
@@ -40,10 +42,35 @@ export default function HomePage() {
           </section>
         </main>
         <Services />
-        <Templates/>
+        <Suspense fallback={<TemplatesFallback />}>
+          <RecentProjects />
+        </Suspense>
         <FAQ />
         <Footer />
       </SessionProvider>
     </div>
+  );
+}
+
+async function RecentProjects() {
+  const { data: projects } = await getSupabaseAdmin()
+    .from("projects")
+    .select("id, name, published_slug, html, created_date")
+    .not("published_slug", "is", null)
+    .order("created_date", { ascending: false })
+    .limit(4);
+
+  return (
+    <Templates projects={projects ?? []} />
+  );
+}
+
+function TemplatesFallback() {
+  return (
+    <section className='w-full border-t border-black/10 bg-[#f6f6f4] px-5 py-20 text-[#171a16] sm:px-8 sm:py-28' aria-label='Loading recent projects'>
+      <div className='mx-auto max-w-6xl'>
+        <p className='text-sm text-[#555b53]'>Loading recent projects...</p>
+      </div>
+    </section>
   );
 }

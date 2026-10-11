@@ -33,10 +33,6 @@ export default function UserAvatar({ user }: { user: NonNullable<Session["user"]
                             <LayoutDashboard size={16} className="inline-block mr-2" />
                             My Projects
                         </Link>
-                        <Link href="" className="mt-3 hover:text-white transition-colors flex flex-row items-center gap-4">
-                            <BarChart size={16} className="inline-block mr-2" />
-                            Analytics <span className="text-xs text-yellow-400 border border-yellow-400 bg-yellow-200/30 rounded-full px-2 py-0.5">coming soon</span>
-                        </Link>
                         <Link href="/dashboard?tab=settings" className="mt-3 hover:text-white transition-colors">
                             <Settings size={16} className="inline-block mr-2" />
                             Account Settings
