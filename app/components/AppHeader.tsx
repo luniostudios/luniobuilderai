@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { ArrowUpRight, Menu, PanelsTopLeft, X } from "lucide-react";
+import { ArrowUpRight, Menu, PanelsTopLeft, Rocket, User, X } from "lucide-react";
 import { SignOut } from "../login/SignOutButton";
 import type { Session } from "next-auth";
 
@@ -14,18 +14,24 @@ export default function AppHeader({ user }: { user?: NonNullable<Session["user"]
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header className="app-header">
-      <div className="relative mx-auto flex min-h-17 w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8 xl:px-10">
-        <Link href="/" className="brand-lockup shrink-0" aria-label="LUNIO Builder home" onClick={closeMobileMenu}>
-          <span className="brand-name">LUNIO Builder</span>
+    <header className="bg-[#0b0d10] w-full mt-0 flex flex-row fixed z-100 justify-between align-middle items-center gap-2 py-4 px-[10%] max-lg:px-5">
+      <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 xl:px-10">
+        <Link href={"/"}>
+          <div className="flex items-center text-white gap-2 cursor-pointer font-bold uppercase text-lg">
+            <div className='flex flex-row text-2xl align-middle items-center'>
+              <h1>LUNI</h1>
+              <Rocket width={20} className="text-bold text-[#b8f36b]" />
+            </div>
+            <h1 className='flex flex-row text-2xl align-middle items-center'>BUILDER</h1>
+          </div>
         </Link>
-        <nav aria-label="Main navigation" className="header-nav hidden xl:flex">
-          <Link href="/builder" className="header-nav-link">FAQ</Link>
-          <Link href="/builder" className="header-nav-link">Pricing</Link>
-          <Link href="/builder" className="header-nav-link">Templates</Link>
-          <Link href="/builder" className="header-nav-link">Services</Link>
-          <Link href="/builder" className="header-nav-link">Documentation</Link>
-          {activeUser && <Link href="/dashboard" className="header-nav-link">My Websites</Link>}
+        <nav aria-label="Main navigation" className="text-white flex-row gap-4 hidden xl:flex">
+          <Link href="/builder" className="text-white">FAQ</Link>
+          <Link href="/builder" className="text-white">Pricing</Link>
+          <Link href="/builder" className="text-white">Templates</Link>
+          <Link href="/builder" className="text-white">Services</Link>
+          <Link href="/builder" className="text-white">Documentation</Link>
+          {activeUser && <Link href="/dashboard" className="text-white">My Websites</Link>}
         </nav>
 
         <div className="hidden items-center gap-3 xl:flex">
@@ -35,18 +41,15 @@ export default function AppHeader({ user }: { user?: NonNullable<Session["user"]
               <SignOut />
             </>
           ) : (
-            <Link href="/login" className="inline-flex h-7 items-center rounded-md border border-border px-2.5 py-4 text-[0.8rem] font-medium transition hover:bg-muted hover:text-foreground">
-              Sign in <ArrowUpRight size={14} />
+            <li><Link href="/login" className="flex flex-row text-white border justify-center border-white/20 rounded-full px-3 py-1 items-center gap-2 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <User size={16} />
+              Sign In
             </Link>
+            </li>
           )}
         </div>
 
         <div className="flex items-center gap-2 xl:hidden">
-          {!activeUser && (
-            <Link href="/login" className="inline-flex h-7 items-center rounded-md border border-border px-2.5 py-4 text-[0.8rem] font-medium transition hover:bg-muted hover:text-foreground">
-              Sign in <ArrowUpRight size={14} />
-            </Link>
-          )}
           <button
             type="button"
             className="header-menu-toggle"
@@ -72,6 +75,13 @@ export default function AppHeader({ user }: { user?: NonNullable<Session["user"]
             <Link href="/builder" onClick={closeMobileMenu}>Documentation</Link>
             {activeUser && <Link href="/dashboard" onClick={closeMobileMenu}>My Websites</Link>}
           </nav>
+          {!activeUser && (
+            <li><Link href="/login" className="header-mobile-account">
+              <User size={16} />
+              Sign In
+            </Link>
+            </li>
+          )}
           {activeUser && (
             <div className="header-mobile-account">
               <span className="header-mobile-user">{activeUser.name || activeUser.email}</span>

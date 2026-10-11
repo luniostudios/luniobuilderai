@@ -129,7 +129,7 @@ export default function ImageAttachments({ images, onChange, disabled = false, c
           disabled={disabled || processing || images.length >= MAX_IMAGE_ATTACHMENTS}
           aria-label="Add reference or website images"
           title="Add images"
-          className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50 ${compact ? "h-7" : "h-8 border border-border/70 px-2.5 hover:bg-muted/60"}`}
+          className={`inline-flex cursor-pointer items-center gap-2 rounded-sm px-3 py-3 text-sm text-white/45 transition hover:bg-white/6 hover:text-whit"}`}
         >
           <ImagePlus className="h-4 w-4" /> {processing ? "Preparing..." : "Add images"}
         </button>
