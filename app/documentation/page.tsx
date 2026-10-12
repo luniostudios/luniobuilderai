@@ -344,7 +344,7 @@ export default function DocumentationPage() {
                 <div className="flex items-center text-black gap-2 cursor-pointer font-bold uppercase text-lg">
                   <div className='flex flex-row text-2xl align-middle items-center'>
                     <h1>LUNI</h1>
-                    <Rocket width={20} className="text-bold text-[#b8f36b]" />
+                    <Rocket width={20} className="text-bold" />
                   </div>
                   <h1 className='flex flex-row text-2xl align-middle items-center'>BUILDER</h1>
                 </div>
