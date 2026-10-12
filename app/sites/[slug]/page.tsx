@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { cache } from "react";
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getSupabaseAdmin } from "@/lib/db";
@@ -56,17 +56,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       images: socialImage ? [socialImage] : undefined,
     },
-  };
-}
-
-export async function generateViewport({ params }: PageProps): Promise<Viewport> {
-  const { slug } = await params;
-  const site = await getPublishedSite(slug);
-  const metadata = site ? normalizeSiteMetadata(site.site_metadata) : null;
-  return {
-    width: "device-width",
-    initialScale: 1,
-    ...(metadata?.themeColor ? { themeColor: metadata.themeColor } : {}),
   };
 }
 
