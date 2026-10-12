@@ -3,7 +3,7 @@ import Services from "./components/home/Services";
 import { SessionProvider } from "next-auth/react";
 import PromptTextArea from "./components/home/PromptTextArea";
 import { ArrowUpRight, Check } from "lucide-react";
-import Templates from "./components/home/Templates";
+import Templates from "./components/home/Examples";
 import Footer from "./components/home/Footer";
 import FAQ from "./components/home/FAQ";
 import { getSupabaseAdmin } from "@/lib/db";
