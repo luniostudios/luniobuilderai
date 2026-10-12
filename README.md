@@ -18,6 +18,8 @@ For existing Supabase projects, rerun `supabase/schema.sql` to create the Auth.j
 
 Create `NEXTAUTH_SECRET` and `INTEGRATION_ENCRYPTION_KEY` with `openssl rand -base64 32`. Keep the integration encryption key stable; changing it makes stored provider keys unreadable. Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/apikey), set `GEMINI_API_KEY`, and optionally choose a model in `GEMINI_MODEL` (defaults to `gemini-3.6-flash`). Free-tier availability is subject to Google's current model access and usage limits. Use the Supabase project URL and service-role key for `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Keep all API keys server-side; do not expose them as `NEXT_PUBLIC_` variables.
 
+Screenshot rendering uses a local Chrome/Chromium binary in development (`CHROME_EXECUTABLE_PATH`). In production, `@sparticuz/chromium-min` requires `CHROMIUM_PACK_URL` to point to a hosted Chromium pack tarball that matches the deployment architecture. Screenshot endpoints render scripts disabled and allow only Unsplash images and Google Fonts network resources.
+
 ## Checks
 
 ```bash

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import type { Database } from '@/lib/database.types';
+import ProjectScreenshot from '@/app/components/ProjectScreenshot';
 
-type Project = Pick<Database['public']['Tables']['projects']['Row'], 'id' | 'name' | 'published_slug' | 'html' | 'created_date'>;
+type Project = Pick<Database['public']['Tables']['projects']['Row'], 'id' | 'name' | 'published_slug' | 'created_date' | 'updated_date'>;
 
 const Templates = ({ projects }: { projects: Project[] }) => {
   return (
@@ -20,19 +21,8 @@ const Templates = ({ projects }: { projects: Project[] }) => {
           <div className='mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4'>
             {projects.filter((project) => project.published_slug).map((project) => (
               <article key={project.id} className='group overflow-hidden rounded-xs border border-black/10 bg-white shadow-[0_18px_40px_rgba(18,22,17,0.04)] transition-transform duration-200 hover:-translate-y-1'>
-                <div className="relative h-40">
-                  {project.html ? (
-                    <iframe
-                      srcDoc={project.html}
-                      sandbox="allow-scripts allow-forms allow-popups"
-                      scrolling="no"
-                      className="pointer-events-none absolute inset-0 h-full w-full"
-                      title={`${project.name} preview`}
-                      tabIndex={-1}
-                    />
-                  ) : (
-                    <span className="flex h-full items-center justify-center font-display text-5xl text-brand/60">L</span>
-                  )}
+                <div className="relative h-40 overflow-hidden bg-muted">
+                  <ProjectScreenshot projectId={project.id} updatedAt={project.updated_date} published projectName={project.name} />
                 </div>
 
                 <div className='p-5'>

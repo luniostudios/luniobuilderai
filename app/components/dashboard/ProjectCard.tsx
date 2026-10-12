@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import type { Database } from "@/lib/database.types";
 import { Card } from "@/components/ui/card";
+import ProjectScreenshot from "@/app/components/ProjectScreenshot";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 
@@ -22,16 +23,9 @@ export default function ProjectCard({
   return (
     <Card className="group relative border-border/70 transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_24px_50px_-34px_rgba(18,18,45,0.45)]">
       <Link href={`/builder/${project.id}`} className="flex min-h-52 flex-col">
-        <div className="relative h-40">
+        <div className="relative h-40 overflow-hidden bg-muted">
           {project.html ? (
-            <iframe
-              srcDoc={project.html}
-              sandbox="allow-scripts allow-forms allow-popups"
-              scrolling="no"
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              title={`${project.name} preview`}
-              tabIndex={-1}
-            />
+            <ProjectScreenshot projectId={project.id} updatedAt={project.updated_date} projectName={project.name} />
           ) : (
             <span className="flex h-full items-center justify-center font-display text-5xl text-brand/60">L</span>
           )}

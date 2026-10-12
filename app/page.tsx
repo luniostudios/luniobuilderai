@@ -55,7 +55,7 @@ export default function HomePage() {
 async function RecentProjects() {
   const { data: projects } = await getSupabaseAdmin()
     .from("projects")
-    .select("id, name, published_slug, html, created_date")
+    .select("id, name, published_slug, created_date, updated_date")
     .not("published_slug", "is", null)
     .order("created_date", { ascending: false })
     .limit(4);
