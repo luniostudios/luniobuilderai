@@ -108,6 +108,19 @@ alter table public.daily_generation_usage enable row level security;
 revoke all on table public.daily_generation_usage from public, anon, authenticated;
 grant all on table public.daily_generation_usage to service_role;
 
+create table if not exists public.project_integrations (
+  project_id uuid not null references public.projects(id) on delete cascade,
+  owner_id text not null,
+  provider text not null check (provider = 'unsplash'),
+  encrypted_key text not null,
+  updated_at timestamptz not null default now(),
+  primary key (project_id, provider)
+);
+
+alter table public.project_integrations enable row level security;
+revoke all on table public.project_integrations from public, anon, authenticated;
+grant all on table public.project_integrations to service_role;
+
 create index if not exists projects_owner_updated_idx
   on public.projects (owner_id, updated_date desc);
 create unique index if not exists projects_published_slug_idx

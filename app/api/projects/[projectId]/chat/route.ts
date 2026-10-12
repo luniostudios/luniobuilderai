@@ -17,6 +17,16 @@ type WebsiteUpdate = {
   cmsData: unknown;
 };
 
+function containsCredential(message: string): boolean {
+  return [
+    /\b(?:api|access)[\s_-]*key\s*[:=]\s*["']?[A-Za-z0-9._-]{12,}/i,
+    /\b(?:bearer|token|secret)\s*[:=]\s*["']?[A-Za-z0-9._-]{16,}/i,
+    /\b(?:sk-[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{30,}|AKIA[A-Z0-9]{16})\b/,
+    /^\s*["']?[A-Za-z0-9._~+/=-]{24,512}["']?\s*$/,
+    /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{40,64}(?![A-Za-z0-9_-])/,
+  ].some((pattern) => pattern.test(message));
+}
+
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -101,6 +111,12 @@ export async function POST(request: Request, { params }: RouteContext) {
   ) {
     return NextResponse.json({ error: "Enter a request of 1 to 8,000 characters." }, { status: 400 });
   }
+  if (containsCredential(body.message)) {
+    return NextResponse.json({
+      error: "It looks like this message contains an API key. It was not saved or sent to the AI. Add the key with the secure API integrations control below the chat.",
+      code: "SECRET_INPUT_REJECTED",
+    }, { status: 400 });
+  }
   const attachments = parseImageAttachments("images" in body ? body.images : undefined);
   if (!attachments) {
     return NextResponse.json({ error: "Images must be WebP files, up to 1 MB each and 1.5 MB total." }, { status: 400 });
@@ -125,6 +141,14 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (projectError) return NextResponse.json({ error: "Could not load this website." }, { status: 500 });
   if (!project) return NextResponse.json({ error: "Website not found." }, { status: 404 });
   const currentProject = project as unknown as Project;
+
+  const { data: integrations, error: integrationsError } = await supabase
+    .from("project_integrations")
+    .select("provider")
+    .eq("project_id", projectId)
+    .eq("owner_id", ownerId);
+  if (integrationsError) return NextResponse.json({ error: "Could not load API integration settings." }, { status: 500 });
+  const configuredIntegrations = integrations?.map((integration) => integration.provider) ?? [];
 
   const { data: priorMessages, error: historyError } = await supabase
     .from("messages")
@@ -169,6 +193,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   }));
   const systemPrompt = [
     baseprompt,
+    `Project id: ${projectId}\nConfigured server-side API integrations: ${configuredIntegrations.join(", ") || "none"}.`,
+    `Unsplash search endpoint: /api/projects/${projectId}/integrations/unsplash/search?query=...`,
     `Current complete HTML (empty means this is a new website):\n${currentProject.html.slice(0, 120000) || "(empty)"}`,
     `Current CMS data:\n${JSON.stringify(currentProject.cms_data ?? { collections: [] }).slice(0, 60000)}`,
   ].join("\n\n");

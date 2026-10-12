@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Triangle, Settings, Loader, ChevronDown, ChevronLeft } from "lucide-react";
+import { ArrowLeft, Code2, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Triangle, Settings, Loader, ChevronDown, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
 import ElementStylePanel from "@/app/components/builder/ElementStylePanel";
 import CmsManager from "@/app/components/builder/CmsManager";
 import ProjectSettings from "@/app/components/builder/ProjectSettings";
+import ProjectCodeView from "@/app/components/builder/ProjectCodeView";
+import ProjectIntegrations from "@/app/components/builder/ProjectIntegrations";
 import { injectPreviewInspector, patchElementDelete, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
 import { injectCmsContent, normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { injectSiteMetadata } from "@/lib/site-metadata";
@@ -21,7 +23,7 @@ type Project = Database["public"]["Tables"]["projects"]["Row"];
 type StoredMessage = Database["public"]["Tables"]["messages"]["Row"];
 type ChatMessage = Pick<StoredMessage, "id" | "role" | "content" | "created_date">;
 type ActivePanel = "chat" | "preview";
-type BuilderView = "website" | "cms" | "settings";
+type BuilderView = "website" | "cms" | "settings" | "code";
 type PreviewMode = "edit" | "preview";
 type Breakpoint = "desktop" | "tablet" | "mobile";
 
@@ -396,11 +398,18 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
       });
       const result = (await response.json()) as {
         error?: string;
+        code?: string;
         userMessage?: ChatMessage;
         assistantMessage?: ChatMessage;
         project?: Project;
       };
       if (!response.ok || !result.project || !result.userMessage || !result.assistantMessage) {
+        if (result.code === "SECRET_INPUT_REJECTED") {
+          setMessages((current) => current.filter((message) => message.id !== pendingId));
+          setDraft("");
+          setError(result.error || "Use the secure API integrations control to add an API key.");
+          return;
+        }
         throw new Error(result.error || "The website could not be updated.");
       }
 
@@ -669,9 +678,28 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
         >
           <Settings className="h-4 w-4" /> Settings
         </button>
+        <button
+          type="button"
+          aria-pressed={builderView === "code"}
+          onClick={() => setBuilderView("code")}
+          className={`flex items-center gap-2 border-b-2 px-5 text-sm ${builderView === "code" ? " font-medium" : "border-transparent"}`}
+        >
+          <Code2 className="h-4 w-4" /> Code
+        </button>
       </nav>
 
-      {builderView === "cms" ? (
+      {builderView === "code" ? (
+        project.html ? (
+          <ProjectCodeView
+            projectName={project.name}
+            code={injectSiteMetadata(injectCmsContent(project.html, project.cms_data), project.site_metadata, project.name)}
+          />
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+            Generate your website to view its HTML source.
+          </div>
+        )
+      ) : builderView === "cms" ? (
         <CmsManager key={project.updated_date} value={project.cms_data} onSave={saveCmsData} />
       ) : builderView === "settings" ? (
         <ProjectSettings
@@ -751,6 +779,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
             </div>
 
             {error && <p role="alert" className="px-4 pb-2 text-xs leading-relaxed text-destructive">{error}</p>}
+            <ProjectIntegrations projectId={projectId} />
             <form onSubmit={handleSubmit} className="shrink-0 border-t border-border/70 p-3 sm:p-4">
               <div className="rounded-2xl border border-border/80 transition-colors focus-within:border-brand/50">
                 <textarea

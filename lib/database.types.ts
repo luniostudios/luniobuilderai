@@ -110,6 +110,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      project_integrations: {
+        Row: {
+          project_id: string;
+          owner_id: string;
+          provider: "unsplash";
+          encrypted_key: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          owner_id: string;
+          provider: "unsplash";
+          encrypted_key: string;
+          updated_at?: string;
+        };
+        Update: {
+          project_id?: string;
+          owner_id?: string;
+          provider?: "unsplash";
+          encrypted_key?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
