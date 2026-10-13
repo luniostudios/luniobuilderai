@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 function siteSlugForHost(request: NextRequest): string | null {
-  const configuredDomain = process.env.SITE_BASE_DOMAIN?.trim().toLowerCase();
+  const configuredDomain = (process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN?.trim() || process.env.SITE_BASE_DOMAIN?.trim())?.toLowerCase();
   if (!configuredDomain) return null;
 
   const domain = configuredDomain.replace(/^https?:\/\//, "").split("/")[0].replace(/:\d+$/, "");
-  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "")
+  const host = (request.headers.get("host") ?? request.headers.get("x-forwarded-host") ?? request.nextUrl.host)
     .split(",")[0]
     .trim()
     .toLowerCase()

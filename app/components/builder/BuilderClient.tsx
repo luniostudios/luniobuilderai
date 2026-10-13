@@ -337,7 +337,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
       if (!response.ok || !result.url) {
         throw new Error(result.error || "Could not deploy to Vercel.");
       }
-      setVercelDeploymentUrl(result.url);
+      setVercelDeploymentUrl(result.domain);
       setVercelTokenSaved(result.tokenSaved ?? false);
       setVercelToken("");
     } catch (reason) {
@@ -524,7 +524,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
           {showPublishMenu && (
             <div className="absolute top-full right-0 mt-1 px-4 w-48 bg-black border border-gray-700 rounded-sm shadow-2xl py-2 z-50">
-              <div className="flex items-center gap-1">
+              {/**<div className="flex items-center gap-1">
                 <button
                   onClick={published ? handleUnpublish : handlePublish}
                   disabled={!project || isPublishing}
@@ -546,7 +546,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     <ExternalLink size={12} />
                   </a>
                 )}
-              </div>
+              </div>**/}
               <button
                 onClick={() => setShowVercelDialog(true)}
                 className="w-full flex items-center gap-2 px-2 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
@@ -626,7 +626,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     onChange={(event) => setVercelToken(event.target.value)}
                     autoComplete="off"
                     maxLength={512}
-                    disabled={vercelDeploying || project.encrypted_vercel_token !== null}
+                    disabled={vercelDeploying}
                     placeholder={project.encrypted_vercel_token !== null ? "You have a saved token, just press Deploy" : "Enter a Vercel access token"}
                     className="h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   />

@@ -15,15 +15,16 @@ export function getSiteAuthClient() {
 }
 
 export function getPublishedSiteOrigin(request: Request, slug: string): string | null {
-  const domainSetting = process.env.SITE_BASE_DOMAIN?.trim().toLowerCase();
+  const domainSetting = (process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN?.trim() || process.env.SITE_BASE_DOMAIN?.trim())?.toLowerCase();
   if (!domainSetting) return null;
   const domain = domainSetting.replace(/^https?:\/\//, "").split("/")[0].replace(/:\d+$/, "");
-  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "")
+  const host = (request.headers.get("host") ?? request.headers.get("x-forwarded-host") ?? new URL(request.url).host)
     .split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
   const expectedHost = `${slug}.${domain}`;
   if (host !== expectedHost) return null;
 
-  const origin = new URL(request.url).origin;
+  const protocol = request.headers.get("x-forwarded-proto")?.split(",")[0].trim() ?? new URL(request.url).protocol.replace(/:$/, "");
+  const origin = `${protocol}://${host}`;
   if (request.headers.get("origin") && request.headers.get("origin") !== origin) return null;
   return origin;
 }

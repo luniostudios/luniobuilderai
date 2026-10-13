@@ -58,7 +58,7 @@ async function RecentProjects() {
     .select("id, name, published_slug, created_date, updated_date")
     .not("published_slug", "is", null)
     .order("created_date", { ascending: false })
-    .limit(4);
+    .limit(8);
 
   return (
     <Templates projects={projects ?? []} />
