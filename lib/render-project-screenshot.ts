@@ -34,7 +34,7 @@ async function launchBrowser(): Promise<Browser> {
   if (localExecutable) {
     return puppeteer.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: await chromium.executablePath(remotePath),
+      executablePath: localExecutable,
       headless: true,
       defaultViewport: { width: 1280, height: 800, deviceScaleFactor: 1 },
     });
@@ -45,7 +45,7 @@ async function launchBrowser(): Promise<Browser> {
     chromium.setGraphicsMode = false;
     return puppeteer.launch({
       args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
-      executablePath: await chromium.executablePath(packUrl),
+      executablePath: await chromium.executablePath(remotePath),
       headless: "shell",
       defaultViewport: { width: 1280, height: 800, deviceScaleFactor: 1 },
     });
