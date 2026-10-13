@@ -104,7 +104,7 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
                     />
                     <ImageAttachments images={images} onChange={setImages} disabled={creating || limitReached} />
                     <div className="flex flex-wrap items-center mt-3 justify-between border-t border-white/10 px-2 pt-3 sm:px-3">
-                        <span className="prompt-char-count">{prompt.length ? `${prompt.length} / 8000` : "Press enter to create"}</span>
+                        <span className="text-sm text-white/30">{prompt.length ? `${prompt.length} / 8000` : "Press enter to create"}</span>
                         <div className="flex flex-row gap-3">
                             <button type="submit" disabled={creating || enhancing || limitReached || status === "loading" || (!prompt.trim() && !images.length)} className="inline-flex items-center gap-2 rounded-sm bg-[#b8f36b] px-4 py-2.5 text-sm font-semibold text-[#10150c] transition hover:bg-[#d0ff91] disabled:cursor-not-allowed disabled:opacity-35">
                                 {creating ? <Loader2 size={17} className="animate-spin" /> : <ArrowUp size={17} />}
@@ -113,8 +113,8 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
                         </div>
                     </div>
                 </div>
-                <div className="prompt-starters" aria-label="Prompt ideas">
-                    <span className="prompt-starters-label">TRY</span>
+                <div className="flex flex-row gap-3 mt-5 items-center" aria-label="Prompt ideas">
+                    <span className="text-sm text-white/30">TRY</span>
                     {starters.map((starter) => (
                         <button
                             key={starter.label}

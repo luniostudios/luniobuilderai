@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Code2, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, LogOut, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Triangle, Settings, Loader, ChevronDown, ChevronLeft } from "lucide-react";
+import { Code2, Database as DatabaseIcon, Eye, ExternalLink, Globe, Loader2, MessageSquare, Monitor, Pencil, Send, Smartphone, Sparkles, Tablet, Settings, Loader, ChevronDown, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/database.types";
 import ElementStylePanel from "@/app/components/builder/ElementStylePanel";
@@ -16,10 +16,10 @@ import { injectSiteMetadata } from "@/lib/site-metadata";
 import type { CmsData } from "@/lib/cms";
 import ImageAttachments from "@/app/components/home/ImageAttachments";
 import { parseImageAttachments, type ImageAttachment } from "@/lib/image-attachments";
-import { signOut } from "next-auth/react";
 import { IconBrandVercel } from "@tabler/icons-react";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
+type User = Database["next_auth"]["Tables"]["users"]["Row"];
 type StoredMessage = Database["public"]["Tables"]["messages"]["Row"];
 type ChatMessage = Pick<StoredMessage, "id" | "role" | "content" | "created_date">;
 type ActivePanel = "chat" | "preview";
@@ -768,7 +768,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                       <p className="mb-1.5 text-[11px] font-medium">
                         {message.role === "user" ? "You" : "LUNIO Builder"}
                       </p>
-                      <div className={`rounded-2xl px-3.5 py-3 text-sm leading-relaxed ${message.role === "user" ? "rounded-br-md bg-black text-white" : "rounded-bl-md bg-muted/70"}`}>
+                      <div className={`rounded-md px-3.5 py-3 text-sm leading-relaxed ${message.role === "user" ? "rounded-br-sm bg-black text-white" : "rounded-bl-md bg-muted/70"}`}>
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       </div>
                     </article>

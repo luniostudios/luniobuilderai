@@ -88,20 +88,19 @@ export default function ImageAttachments({ images, onChange, disabled = false, c
       {images.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Attached images">
           {images.map((image, index) => (
-            <li key={`${image.name}-${index}`} className="flex max-w-full items-center gap-2 border border-white/20 bg-background p-1.5">
+            <li key={`${image.name}-${index}`} className="relative flex border border-white/20 bg-background p-1.5">
               <span
                 role="img"
                 aria-label={`Preview of ${image.name}`}
                 style={{ backgroundImage: `url("data:${image.mimeType};base64,${image.data}")` }}
-                className="h-10 w-10 shrink-0 bg-cover bg-center"
-              />
-              <span className="max-w-32 truncate text-xs" title={image.name}>{image.name}</span>
+                className="h-30 w-30 shrink-0 bg-cover bg-center"
+              /> 
               <button
                 type="button"
                 aria-label={`Remove ${image.name}`}
                 disabled={disabled}
                 onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}
-                className="grid h-7 w-7 shrink-0 place-items-center hover:text-red-500 disabled:opacity-50"
+                className="absolute right-2 top-2 h-5 w-5 shrink-0 rounded-md text-red-500 place-items-center bg-red-500/30 disabled:opacity-50"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

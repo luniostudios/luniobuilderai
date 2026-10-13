@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Database, FilePlus2, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EMPTY_CMS_DATA, normalizeCmsData, type CmsData, type CmsField } from "@/lib/cms";
 
 type Props = {
@@ -66,12 +67,9 @@ export default function CmsManager({ value, onSave }: Props) {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <div className="mx-auto w-full max-w-5xl px-5 py-7 sm:px-8">
+      <div className=" w-full px-5 py-7 sm:px-8">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/70 pb-5">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-emerald-600/10 text-emerald-700">
-              <Database className="h-5 w-5" />
-            </span>
             <div>
               <h2 className="font-heading text-xl font-semibold">Content collections</h2>
               <p className="mt-1 max-w-xl text-sm leading-relaxed">Manage the content your generated website uses. Ask the builder to create a CMS for a blog, menu, team, or other repeatable content.</p>
@@ -125,10 +123,10 @@ export default function CmsManager({ value, onSave }: Props) {
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" className="gap-2" onClick={addItem}>
-                    <FilePlus2 className="h-4 w-4" /> Add record
+                    <Plus className="h-4 w-4" /> Add record
                   </Button>
                   <Button
-                    variant="ghost"
+                    className="bg-destructive/10 text-destructive hover:bg-destructive/20"
                     size="icon"
                     aria-label={`Delete ${selected.name} collection`}
                     title="Delete collection"
@@ -144,42 +142,54 @@ export default function CmsManager({ value, onSave }: Props) {
               </div>
 
               {selected.items.length ? (
-                <div className="space-y-4">
-                  {selected.items.map((item, index) => (
-                    <article key={item.id} className="border border-border/80 p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide">Record {index + 1}</h4>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Delete record ${index + 1}`}
-                          title="Delete record"
-                          onClick={() => updateCollection(selected.id, (collection) => ({ ...collection, items: collection.items.filter((entry) => entry.id !== item.id) }))}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                <div className="overflow-hidden rounded-md border border-border/80">
+                  <Table className="min-w-max">
+                    <caption className="sr-only">{selected.name} records</caption>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40 hover:bg-muted/40">
+                        <TableHead className="w-16 text-black">#</TableHead>
                         {selected.fields.map((field) => (
-                          <label key={field.key} className="block min-w-0 space-y-1.5">
-                            <span className="text-xs font-medium">{field.label}</span>
-                            <input
-                              type={field.type === "date" ? "date" : field.type === "url" || field.type === "image" ? "url" : "text"}
-                              value={item.values[field.key] ?? ""}
-                              onChange={(event) => updateCollection(selected.id, (collection) => ({
-                                ...collection,
-                                items: collection.items.map((entry) => entry.id === item.id
-                                  ? { ...entry, values: { ...entry.values, [field.key]: event.target.value } }
-                                  : entry),
-                              }))}
-                              placeholder={field.type === "image" ? "https://..." : field.label}
-                              className="h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                          </label>
+                          <TableHead key={field.key} className="min-w-44 text-black">{field.label}</TableHead>
                         ))}
-                      </div>
-                    </article>
-                  ))}
+                        <TableHead className="w-12"><span className="sr-only">Actions</span></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selected.items.map((item, index) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="text-xs tabular-nums">{index + 1}</TableCell>
+                          {selected.fields.map((field) => (
+                            <TableCell key={field.key} className="min-w-44">
+                              <input
+                                aria-label={`Record ${index + 1}, ${field.label}`}
+                                type={field.type === "date" ? "date" : field.type === "url" || field.type === "image" ? "url" : "text"}
+                                value={item.values[field.key] ?? ""}
+                                onChange={(event) => updateCollection(selected.id, (collection) => ({
+                                  ...collection,
+                                  items: collection.items.map((entry) => entry.id === item.id
+                                    ? { ...entry, values: { ...entry.values, [field.key]: event.target.value } }
+                                    : entry),
+                                }))}
+                                placeholder={field.type === "image" ? "https://..." : field.label}
+                                className="h-9 w-full min-w-36 rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              />
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-right">
+                            <Button
+                              size="icon"   
+                              className="bg-destructive/10 text-destructive hover:bg-destructive/20"
+                              aria-label={`Delete record ${index + 1}`}
+                              title="Delete record"
+                              onClick={() => updateCollection(selected.id, (collection) => ({ ...collection, items: collection.items.filter((entry) => entry.id !== item.id) }))}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <div className="flex min-h-48 flex-col items-center justify-center border border-dashed border-border px-6 text-center">

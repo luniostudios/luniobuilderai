@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SelectedElement } from "@/lib/preview-inspector";
 
@@ -239,6 +239,9 @@ const KNOWN_PROPERTIES = [...new Set([
   ...STYLE_GROUPS.flatMap(({ fields }) => fields.map(({ property }) => property)),
 ])];
 
+const PANEL_INPUT_CLASS = "h-8 w-full min-w-0 rounded-sm border border-white/10 px-2 text-xs text-white outline-none placeholder:text-white/25 focus-visible:ring-1 focus-visible:ring-white/30";
+const PANEL_SUMMARY_CLASS = "flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-[11px] font-medium text-white/80 transition-colors hover:bg-white/5 [&::-webkit-details-marker]:hidden";
+
 type ElementStylePanelProps = {
   selection: SelectedElement;
   saving: boolean;
@@ -331,28 +334,35 @@ function ElementStylePanelContent({
   }
 
   return (
-    <aside aria-label="Element styles" className="flex h-full min-h-0 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/70 px-4 py-3">
+    <aside aria-label="Element styles" className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-3 py-3">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Selected element</p>
-          <h2 className="truncate font-heading text-sm font-semibold">{title}</h2>
-          {selection.text && <p className="mt-1 truncate text-xs text-muted-foreground">{selection.text}</p>}
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className="text-[9px] font-semibold tracking-[0.12em] text-white/40">STYLE</span>
+            <span className="text-[9px] text-white/20">/</span>
+            <span className="text-[9px] text-white/45">Selected element</span>
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="truncate text-[13px] font-medium">{title}</h2>
+            <span className="shrink-0 rounded-sm bg-white/8 px-1.5 py-0.5 text-[9px] uppercase text-white/55">{selection.tagName}</span>
+          </div>
+          {selection.text && <p className="mt-1 truncate text-[11px] text-white/40">{selection.text}</p>}
         </div>
         <button
           type="button"
           aria-label="Close style panel"
           onClick={onClose}
-          className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="rounded-sm p-1 text-white/45 transition-colors hover:bg-white/10 hover:text-white"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        <div className="space-y-3">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div>
           {selection.tagName === "img" && (
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Image URL</span>
+            <label className="block space-y-1.5 border-b border-white/10 px-3 py-3">
+              <span className="text-[10px] font-medium text-white/50">Image URL</span>
               <input
                 type="url"
                 value={selection.imageUrl}
@@ -360,17 +370,19 @@ function ElementStylePanelContent({
                 disabled={deleting}
                 placeholder="https://example.com/image.jpg"
                 aria-label="Image URL"
-                className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className={PANEL_INPUT_CLASS}
               />
             </label>
           )}
 
-          <details open className="group rounded-md border border-border/70">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold">Color</summary>
-            <div className="space-y-3 border-t border-border/70 p-3">
+          <details open className="group border-b border-white/10">
+            <summary className={PANEL_SUMMARY_CLASS}>
+              Color <ChevronDown className="h-3.5 w-3.5 text-white/35 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="grid grid-cols-1 gap-2.5 border-t border-white/8 px-3 py-3">
               {COLOR_FIELDS.map((field) => (
-                <label key={field.property} className="block space-y-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+                <label key={field.property} className="block min-w-0 space-y-1">
+                  <span className="block truncate text-[10px] font-medium text-white/50">{field.label}</span>
                   <span className="flex items-center gap-2">
                     <input
                       type="color"
@@ -378,7 +390,7 @@ function ElementStylePanelContent({
                       onChange={(event) => updateStyle(field.property, event.target.value)}
                       disabled={deleting}
                       aria-label={`${field.label} picker`}
-                      className="h-9 w-11 shrink-0 cursor-pointer rounded-md border border-input p-1"
+                      className="h-8 w-9 shrink-0 cursor-pointer rounded-sm border border-white/10 bg-[#151619] p-1"
                     />
                     <input
                       type="text"
@@ -388,7 +400,7 @@ function ElementStylePanelContent({
                       disabled={deleting}
                       placeholder="CSS color, e.g. #000 or transparent"
                       aria-label={`${field.label} CSS value`}
-                      className="h-9 min-w-0 flex-1 rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className={PANEL_INPUT_CLASS}
                     />
                   </span>
                 </label>
@@ -397,19 +409,21 @@ function ElementStylePanelContent({
           </details>
 
           {STYLE_GROUPS.map((group) => (
-            <details key={group.title} open={["Layout", "Size", "Spacing", "Typography"].includes(group.title)} className="rounded-md border border-border/70">
-              <summary className="cursor-pointer px-3 py-2 text-xs font-semibold">{group.title}</summary>
-              <div className="space-y-3 border-t border-border/70 p-3">
+            <details key={group.title} open={group.title === "Layout"} className="group border-b border-white/10">
+              <summary className={PANEL_SUMMARY_CLASS}>
+                {group.title} <ChevronDown className="h-3.5 w-3.5 text-white/35 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-2.5 border-t border-white/8 px-3 py-3">
                 {group.fields.map((field) => (
-                  <label key={field.property} className="block space-y-1.5">
-                    <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+                  <label key={field.property} className="block min-w-0 space-y-1">
+                    <span className="block truncate text-[10px] font-medium text-white/50" title={field.label}>{field.label}</span>
                     <input
                       value={draftStyles[field.property] ?? ""}
                       onChange={(event) => updateStyle(field.property, event.target.value)}
                       onKeyDown={commitOnEnter}
                       placeholder={field.placeholder ?? ""}
                       aria-label={field.label}
-                      className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className={PANEL_INPUT_CLASS}
                     />
                   </label>
                 ))}
@@ -417,20 +431,22 @@ function ElementStylePanelContent({
             </details>
           ))}
 
-          <details className="rounded-md border border-border/70">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold">Any CSS property</summary>
-            <div className="space-y-3 border-t border-border/70 p-3">
-              <p className="text-xs leading-relaxed text-muted-foreground">
+          <details className="group border-b border-white/10">
+            <summary className={PANEL_SUMMARY_CLASS}>
+              Advanced CSS <ChevronDown className="h-3.5 w-3.5 text-white/35 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="space-y-3 border-t border-white/8 px-3 py-3">
+              <p className="text-[10px] leading-relaxed text-white/40">
                 Add any standard CSS property or custom property. Values use normal CSS syntax and are applied by the browser.
               </p>
               <datalist id="element-css-properties">
                 {availableProperties.map((property) => <option key={property} value={property} />)}
               </datalist>
               {customProperties.map((item, index) => (
-                <div key={item.id} className="space-y-2 rounded-md bg-muted/40 p-2.5">
+                <div key={item.id} className="space-y-2 rounded-sm border border-white/8 bg-white/3 p-2.5">
                   <div className="flex items-center gap-2">
                     <label className="min-w-0 flex-1 space-y-1">
-                      <span className="text-[10px] font-medium text-muted-foreground">CSS property</span>
+                      <span className="text-[10px] font-medium text-white/50">CSS property</span>
                       <input
                         list="element-css-properties"
                         value={item.property}
@@ -447,7 +463,7 @@ function ElementStylePanelContent({
                         disabled={deleting}
                         placeholder="e.g. clip-path or --brand-color"
                         aria-label={`CSS property ${index + 1}`}
-                        className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        className={PANEL_INPUT_CLASS}
                       />
                     </label>
                     <button
@@ -455,13 +471,13 @@ function ElementStylePanelContent({
                       onClick={() => removeCustomProperty(item)}
                       disabled={deleting}
                       aria-label="Remove CSS property"
-                      className="mt-5 rounded-md p-2"
+                      className="mt-5 rounded-sm p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                   <label className="block space-y-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">CSS value</span>
+                    <span className="text-[10px] font-medium text-white/50">CSS value</span>
                     <input
                       value={item.value}
                       onChange={(event) => {
@@ -472,12 +488,12 @@ function ElementStylePanelContent({
                       disabled={deleting || !item.property}
                       placeholder="Enter a CSS value"
                       aria-label={`CSS value ${index + 1}`}
-                      className="h-9 w-full rounded-md border border-input px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className={PANEL_INPUT_CLASS}
                     />
                   </label>
                 </div>
               ))}
-              <Button type="button" size="sm" className="w-full gap-2" onClick={addCustomProperty} disabled={deleting}>
+              <Button type="button" variant="outline" size="sm" className="w-full gap-2 rounded-sm border-white/10 bg-transparent text-xs text-white/75 hover:bg-white/8 hover:text-white" onClick={addCustomProperty} disabled={deleting}>
                 <Plus className="h-4 w-4" /> Add CSS property
               </Button>
               {propertyError && <p role="alert" className="text-xs text-destructive">{propertyError}</p>}
@@ -486,21 +502,21 @@ function ElementStylePanelContent({
         </div>
       </div>
 
-      <footer className="shrink-0 space-y-2 border-t border-border/70 px-4 py-3">
+      <footer className="shrink-0 space-y-2 border-t border-white/10 bg-[#1d1e21] px-3 py-2.5">
         <Button
           type="button"
           variant="destructive"
           size="sm"
-          className="w-full gap-2"
+          className="h-8 w-full justify-start gap-2 rounded-sm bg-transparent text-xs text-red-300 hover:bg-red-500/10 hover:text-red-200"
           aria-label={`Delete selected ${title}`}
           title={canDelete ? "Delete selected element" : "The document structure cannot be deleted"}
           disabled={saving || deleting || !canDelete}
           onClick={onDelete}
         >
-          <Trash2 className="h-4 w-4" /> {deleting ? "Deleting…" : "Delete element"}
+          <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Deleting…" : "Delete element"}
         </Button>
         {deleteError && <p role="alert" className="text-xs text-destructive">{deleteError}</p>}
-        <p className="text-xs text-muted-foreground">{saving ? "Saving changes…" : "Changes save automatically"}</p>
+        <p className="text-[10px] text-white/35">{saving ? "Saving changes…" : "Changes save automatically"}</p>
       </footer>
     </aside>
   );

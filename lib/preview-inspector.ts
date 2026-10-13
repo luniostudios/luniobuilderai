@@ -11,7 +11,7 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
   [data-foundry-selected] {
     outline: 2px solid #1687ff !important;
     outline-offset: 2px !important;
-    cursor: crosshair !important;
+    cursor: pointer !important;
   }
   [data-foundry-editing] {
     outline: 2px dashed #1687ff !important;
@@ -23,6 +23,7 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
 <script>
 (() => {
   let mode = "edit";
+  let activeEditor = null;
 
   function selectorFor(element) {
     const parts = [];
@@ -67,8 +68,88 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
     }, "*");
   }
 
+  function finishEditing(save) {
+    if (!activeEditor) return;
+    const { element, editor, originalText } = activeEditor;
+    activeEditor = null;
+    element.removeAttribute("data-foundry-editing");
+    editor.remove();
+    if (!save || editor.value === originalText) return;
+
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let firstTextNode = null;
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      if (!textNode.nodeValue?.trim()) continue;
+      if (!firstTextNode) firstTextNode = textNode;
+      else textNode.nodeValue = "";
+    }
+    if (firstTextNode) firstTextNode.nodeValue = editor.value;
+    else element.appendChild(document.createTextNode(editor.value));
+
+    window.parent.postMessage({
+      type: "foundry:text-change",
+      payload: { selector: selectorFor(element), text: editor.value }
+    }, "*");
+  }
+
+  function editText(element) {
+    finishEditing(true);
+    const originalText = element.innerText || element.textContent || "";
+    if (!originalText.trim()) return;
+
+    const rect = element.getBoundingClientRect();
+    const computed = getComputedStyle(element);
+    const editor = document.createElement("textarea");
+    editor.value = originalText;
+    editor.setAttribute("data-foundry-editing", "");
+    editor.setAttribute("aria-label", "Edit element text");
+    Object.assign(editor.style, {
+      position: "fixed",
+      zIndex: "2147483647",
+      left: rect.left + "px",
+      top: rect.top + "px",
+      width: Math.max(rect.width, 120) + "px",
+      height: Math.max(rect.height, 32) + "px",
+      boxSizing: "border-box",
+      margin: "0",
+      padding: computed.padding,
+      border: "2px dashed #1687ff",
+      borderRadius: "2px",
+      outline: "none",
+      resize: "none",
+      background: "#fff",
+      color: computed.color,
+      fontFamily: computed.fontFamily,
+      fontSize: computed.fontSize,
+      fontWeight: computed.fontWeight,
+      lineHeight: computed.lineHeight,
+      letterSpacing: computed.letterSpacing,
+      textAlign: computed.textAlign,
+      whiteSpace: "wrap",
+      overflow: "hidden",
+    });
+    document.body.appendChild(editor);
+    element.setAttribute("data-foundry-editing", "");
+    activeEditor = { element, editor, originalText };
+
+    editor.addEventListener("blur", () => finishEditing(true), { once: true });
+    editor.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        finishEditing(false);
+      } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        finishEditing(true);
+      }
+    });
+    editor.focus();
+    editor.select();
+  }
+
   function setMode(nextMode) {
     mode = nextMode === "preview" ? "preview" : "edit";
+    if (mode === "preview") finishEditing(true);
     const inspectorStyles = document.getElementById("foundry-inspector-styles");
     if (inspectorStyles) inspectorStyles.disabled = mode === "preview";
     if (mode === "preview") {
@@ -80,6 +161,7 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
     if (mode === "preview") return;
     if (!(event.target instanceof Element)) return;
     if (event.target.closest("[data-foundry-editing]")) return;
+    finishEditing(true);
     event.preventDefault();
     event.stopPropagation();
     select(event.target);
@@ -87,27 +169,16 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
 
   document.addEventListener("dblclick", (event) => {
     if (mode === "preview") return;
-    if (!(event.target instanceof HTMLElement) || event.target.childElementCount > 0) return;
-    const element = event.target;
-    if (!element.textContent?.trim()) return;
+    const element = event.target instanceof HTMLElement
+      ? event.target
+      : event.target instanceof Element
+        ? event.target.closest("a, button")
+        : null;
+    if (!(element instanceof HTMLElement) || ["HTML", "BODY", "SCRIPT", "STYLE", "INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(element.tagName)) return;
+    if (element.closest("[contenteditable='true']")) return;
     event.preventDefault();
     event.stopPropagation();
-    element.setAttribute("contenteditable", "plaintext-only");
-    element.setAttribute("data-foundry-editing", "");
-    element.focus();
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-    element.addEventListener("blur", () => {
-      element.removeAttribute("contenteditable");
-      element.removeAttribute("data-foundry-editing");
-      window.parent.postMessage({
-        type: "foundry:text-change",
-        payload: { selector: selectorFor(element), text: element.textContent || "" }
-      }, "*");
-    }, { once: true });
+    editText(element);
   }, true);
 
   document.addEventListener("submit", (event) => {
@@ -175,7 +246,16 @@ export function patchElementText(html: string, selector: string, text: string): 
     const element = parsed.querySelector(selector);
     if (!(element instanceof HTMLElement)) return html;
     if (element.textContent === text) return html;
-    element.textContent = text;
+    const walker = parsed.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let firstTextNode: Node | null = null;
+    let textNode: Node | null;
+    while ((textNode = walker.nextNode())) {
+      if (!textNode.nodeValue?.trim()) continue;
+      if (!firstTextNode) firstTextNode = textNode;
+      else textNode.nodeValue = "";
+    }
+    if (firstTextNode) firstTextNode.nodeValue = text;
+    else element.appendChild(parsed.createTextNode(text));
     return `<!DOCTYPE html>\n${parsed.documentElement.outerHTML}`;
   } catch {
     return html;

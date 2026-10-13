@@ -9,8 +9,6 @@ const SAFE_RESOURCE_HOSTS = new Set([
   "images.unsplash.com",
 ]);
 
-const remotePath = "https://github.com/Sparticuz/chromium/releases/download/v138.0.1/chromium-v138.0.1-pack.tar";
-
 type Browser = Awaited<ReturnType<typeof puppeteer.launch>>;
 
 let browserPromise: Promise<Browser> | undefined;
@@ -45,7 +43,7 @@ async function launchBrowser(): Promise<Browser> {
     chromium.setGraphicsMode = false;
     return puppeteer.launch({
       args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
-      executablePath: await chromium.executablePath(remotePath),
+      executablePath: await chromium.executablePath(packUrl),
       headless: "shell",
       defaultViewport: { width: 1280, height: 800, deviceScaleFactor: 1 },
     });
