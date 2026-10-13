@@ -337,7 +337,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
       if (!response.ok || !result.url) {
         throw new Error(result.error || "Could not deploy to Vercel.");
       }
-      setVercelDeploymentUrl(result.domain);
+      setVercelDeploymentUrl(result.url);
       setVercelTokenSaved(result.tokenSaved ?? false);
       setVercelToken("");
     } catch (reason) {
