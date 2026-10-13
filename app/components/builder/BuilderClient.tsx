@@ -80,6 +80,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   const [vercelDeploying, setVercelDeploying] = useState(false);
   const [vercelError, setVercelError] = useState("");
   const [vercelDeploymentUrl, setVercelDeploymentUrl] = useState("");
+  const [vercelTokenSaved, setVercelTokenSaved] = useState<boolean | null>(null);
   const initialPromptStartedRef = useRef(false);
   const [showPublishMenu, setShowPublishMenu] = useState(false);
   const [published, setPublished] = useState(false);
@@ -320,21 +321,23 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
   async function handleVercelDeploy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!vercelToken.trim() || vercelDeploying) return;
+    if (vercelDeploying) return;
     setVercelDeploying(true);
     setVercelError("");
     setVercelDeploymentUrl("");
+    setVercelTokenSaved(null);
     try {
       const response = await fetch(`/api/projects/${projectId}/deploy-vercel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: vercelToken, teamId: vercelTeamId.trim() || undefined }),
+        body: JSON.stringify({ token: vercelToken.trim() || undefined, teamId: vercelTeamId.trim() || undefined }),
       });
-      const result = await response.json() as { error?: string; url?: string };
+      const result = await response.json() as { error?: string; url?: string; tokenSaved?: boolean };
       if (!response.ok || !result.url) {
         throw new Error(result.error || "Could not deploy to Vercel.");
       }
       setVercelDeploymentUrl(result.url);
+      setVercelTokenSaved(result.tokenSaved ?? false);
       setVercelToken("");
     } catch (reason) {
       setVercelError(reason instanceof Error ? reason.message : "Could not deploy to Vercel.");
@@ -350,6 +353,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
     setVercelTeamId("");
     setVercelError("");
     setVercelDeploymentUrl("");
+    setVercelTokenSaved(null);
   }
 
   async function saveCmsData(cmsData: CmsData): Promise<string | null> {
@@ -589,6 +593,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
             {vercelDeploymentUrl ? (
               <div className="space-y-4">
                 <p className="text-sm">Your Vercel deployment has been created.</p>
+                {vercelTokenSaved === false && <p role="status" className="text-sm text-destructive">The deployment succeeded, but the access token could not be saved. You will need to enter it again next time.</p>}
                 <a
                   href={vercelDeploymentUrl}
                   target="_blank"
@@ -613,12 +618,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     value={vercelToken}
                     onChange={(event) => setVercelToken(event.target.value)}
                     autoComplete="off"
-                    required
                     maxLength={512}
-                    disabled={vercelDeploying}
-                    placeholder="Paste a Vercel access token"
+                    disabled={vercelDeploying || project.encrypted_vercel_token !== null}
+                    placeholder={project.encrypted_vercel_token !== null ? "You have a saved token, just press Deploy" : "Enter a Vercel access token"}
                     className="h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   />
+                  <p className="text-xs leading-relaxed">Enter a token for the first deployment or to replace the saved token.</p>
                 </label>
                 <label className="block space-y-1.5">
                   <span className="text-sm font-medium">Team ID <span className="font-normal">(optional)</span></span>
@@ -637,12 +642,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                   <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer" className="underline underline-offset-2">
                     Vercel account settings
                   </a>
-                  . The token is used only for this deployment request and is not saved by LUNIO.
+                  . The token is encrypted and saved with this website after a successful deployment.
                 </p>
                 {vercelError && <p role="alert" className="text-sm text-destructive">{vercelError}</p>}
                 <div className="flex justify-end gap-2">
                   <Button type="button" onClick={closeVercelDialog} disabled={vercelDeploying}>Cancel</Button>
-                  <Button type="submit" disabled={!vercelToken.trim() || vercelDeploying}>
+                  <Button type="submit" disabled={vercelDeploying}>
                     {vercelDeploying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deploying…</> : "Deploy"}
                   </Button>
                 </div>

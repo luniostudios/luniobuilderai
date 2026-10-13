@@ -32,12 +32,12 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="text-white/50 flex flex-row gap-3 items-center text-xs" aria-label="How it works">
+          <section className="text-white/50 flex flex-row gap-3 items-center text-xs max-md:flex-col max-md:text-lg" aria-label="How it works">
             <span className="bottom-line-label">FROM FIRST THOUGHT TO FIRST DRAFT</span>
             <div><span>01</span> Describe your idea</div>
-            <span className="text-white/50">→</span>
+            <span className="text-white/50 max-md:rotate-90">→</span>
             <div><span>02</span> See it come together</div>
-            <span className="text-white/50">→</span>
+            <span className="text-white/50 max-md:rotate-90">→</span>
             <div><span>03</span> Refine it with LUNIO</div>
           </section>
         </main>

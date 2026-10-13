@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
 import { getUserProjectLimit } from "@/lib/project-limits";
+import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 
 export async function GET() {
   const ownerId = await getAuthenticatedUserId();
@@ -9,7 +10,7 @@ export async function GET() {
 
   const { data, error } = await getSupabaseAdmin()
     .from("projects")
-    .select("*")
+    .select(PROJECT_CLIENT_COLUMNS)
     .eq("owner_id", ownerId)
     .order("updated_date", { ascending: false });
 
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
   const { data, error } = await getSupabaseAdmin()
     .from("projects")
     .insert({ owner_id: ownerId, name: name || "Untitled site" })
-    .select("*")
+    .select(PROJECT_CLIENT_COLUMNS)
     .single();
 
   if (error?.message.includes("PROJECT_LIMIT_REACHED")) {

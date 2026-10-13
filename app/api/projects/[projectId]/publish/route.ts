@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
+import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -39,7 +40,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     .update({ published_slug: publishedSlug, published_at: new Date().toISOString(), updated_date: new Date().toISOString() })
     .eq("id", projectId)
     .eq("owner_id", ownerId)
-    .select("*")
+    .select(PROJECT_CLIENT_COLUMNS)
     .single();
 
   if (error) return NextResponse.json({ error: "Could not publish website" }, { status: 500 });

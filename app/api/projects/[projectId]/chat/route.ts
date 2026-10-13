@@ -4,6 +4,7 @@ import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
 import { normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { parseImageAttachments } from "@/lib/image-attachments";
+import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 import { baseprompt } from "./prompt";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
@@ -121,19 +122,18 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!attachments) {
     return NextResponse.json({ error: "Images must be WebP files, up to 1 MB each and 1.5 MB total." }, { status: 400 });
   }
-  const usedImages = attachments.filter((image) => image.intent === "use");
   const attachmentInstructions = attachments.length
-    ? `\n\nAttached images and intent:\n${attachments.map((image, index) =>
-      `${index + 1}. ${image.name}: ${image.intent === "use" ? `use this exact image on the website with marker LUNIO_UPLOADED_IMAGE_${index}` : "visual reference only"}`
+    ? `\n\nAttached images:\n${attachments.map((image, index) =>
+      `${index + 1}. ${image.name}: follow the user's intent in their message. If they ask to use or place this image on the website, use the exact image with marker LUNIO_UPLOADED_IMAGE_${index}; otherwise use it only as a visual reference.`
     ).join("\n")}`
     : "";
-  const savedMessage = `${body.message.trim()}${attachments.length ? `\n\n[Attached ${attachments.length} image${attachments.length === 1 ? "" : "s"}: ${attachments.map((image) => `${image.name} (${image.intent})`).join(", ")}]` : ""}`;
+  const savedMessage = `${body.message.trim()}${attachments.length ? `\n\n[Attached ${attachments.length} image${attachments.length === 1 ? "" : "s"}: ${attachments.map((image) => image.name).join(", ")}]` : ""}`;
 
   const { projectId } = await params;
   const supabase = getSupabaseAdmin();
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("*")
+    .select(PROJECT_CLIENT_COLUMNS)
     .eq("id", projectId)
     .eq("owner_id", ownerId)
     .maybeSingle();
@@ -306,8 +306,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   let updatedProject: Project = currentProject;
   if (update.html.trim()) {
     let html = update.html.trim();
-    usedImages.forEach((image) => {
-      const index = attachments.indexOf(image);
+    attachments.forEach((image, index) => {
       html = html.replaceAll(`LUNIO_UPLOADED_IMAGE_${index}`, `data:image/webp;base64,${image.data}`);
     });
     if (html.length > 6000000) {
@@ -319,7 +318,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       .update({ name, html, cms_data: toCmsJson(normalizeCmsData(update.cmsData)!), updated_date: new Date().toISOString() })
       .eq("id", projectId)
       .eq("owner_id", ownerId)
-      .select("*")
+      .select(PROJECT_CLIENT_COLUMNS)
       .maybeSingle();
 
     if (updateError || !data) {

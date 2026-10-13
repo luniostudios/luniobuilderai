@@ -9,6 +9,8 @@ const SAFE_RESOURCE_HOSTS = new Set([
   "images.unsplash.com",
 ]);
 
+const remotePath = "https://github.com/Sparticuz/chromium/releases/download/v138.0.1/chromium-v138.0.1-pack.tar";
+
 type Browser = Awaited<ReturnType<typeof puppeteer.launch>>;
 
 let browserPromise: Promise<Browser> | undefined;
@@ -32,7 +34,7 @@ async function launchBrowser(): Promise<Browser> {
   if (localExecutable) {
     return puppeteer.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: localExecutable,
+      executablePath: await chromium.executablePath(remotePath),
       headless: true,
       defaultViewport: { width: 1280, height: 800, deviceScaleFactor: 1 },
     });

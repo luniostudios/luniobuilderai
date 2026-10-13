@@ -73,7 +73,7 @@ export default function ImageAttachments({ images, onChange, disabled = false, c
           throw new Error("Optimized images must be under 1 MB each and 1.5 MB total.");
         }
         totalBytes += bytes;
-        added.push({ name: file.name, mimeType: "image/webp", data, intent: "reference" });
+        added.push({ name: file.name, mimeType: "image/webp", data });
       }
       onChange([...images, ...added]);
     } catch (reason) {
@@ -88,7 +88,7 @@ export default function ImageAttachments({ images, onChange, disabled = false, c
       {images.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Attached images">
           {images.map((image, index) => (
-            <li key={`${image.name}-${index}`} className="flex max-w-full items-center gap-2 border border-border/80 bg-background p-1.5">
+            <li key={`${image.name}-${index}`} className="flex max-w-full items-center gap-2 border border-white/20 bg-background p-1.5">
               <span
                 role="img"
                 aria-label={`Preview of ${image.name}`}
@@ -96,24 +96,12 @@ export default function ImageAttachments({ images, onChange, disabled = false, c
                 className="h-10 w-10 shrink-0 bg-cover bg-center"
               />
               <span className="max-w-32 truncate text-xs" title={image.name}>{image.name}</span>
-              <select
-                value={image.intent}
-                aria-label={`How to use ${image.name}`}
-                disabled={disabled}
-                onChange={(event) => onChange(images.map((item, itemIndex) => itemIndex === index
-                  ? { ...item, intent: event.target.value as ImageAttachment["intent"] }
-                  : item))}
-                className="h-8 max-w-32 border border-input bg-background px-1.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="reference">Visual reference</option>
-                <option value="use">Use on website</option>
-              </select>
               <button
                 type="button"
                 aria-label={`Remove ${image.name}`}
                 disabled={disabled}
                 onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}
-                className="grid h-7 w-7 shrink-0 place-items-center text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                className="grid h-7 w-7 shrink-0 place-items-center hover:text-red-500 disabled:opacity-50"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

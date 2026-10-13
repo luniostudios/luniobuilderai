@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
 import { injectCmsContent } from "@/lib/cms";
+import { decryptIntegrationKey, encryptIntegrationKey } from "@/lib/integrations";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -40,19 +41,20 @@ export async function POST(request: Request, { params }: RouteContext) {
   const body: unknown = await request.json().catch(() => null);
   if (
     !isRecord(body) ||
-    typeof body.token !== "string" || !body.token.trim() || body.token.length > 512 ||
+    ("token" in body && (typeof body.token !== "string" || body.token.length > 512)) ||
     ("teamId" in body && (typeof body.teamId !== "string" || body.teamId.length > 128))
   ) {
     return NextResponse.json({ error: "Enter a valid Vercel access token and optional team ID." }, { status: 400 });
   }
 
-  const token = body.token.trim();
+  const suppliedToken = typeof body.token === "string" ? body.token.trim() : "";
   const teamId = typeof body.teamId === "string" ? body.teamId.trim() : "";
   const teamQuery = teamId ? `?teamId=${encodeURIComponent(teamId)}` : "";
   const { projectId } = await params;
-  const { data: project, error: loadError } = await getSupabaseAdmin()
+  const supabase = getSupabaseAdmin();
+  const { data: project, error: loadError } = await supabase
     .from("projects")
-    .select("id, name, html, cms_data")
+    .select("id, name, html, cms_data, encrypted_vercel_token")
     .eq("id", projectId)
     .eq("owner_id", ownerId)
     .maybeSingle();
@@ -60,6 +62,19 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (loadError) return NextResponse.json({ error: "Could not load this project." }, { status: 500 });
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
   if (!project.html.trim()) return NextResponse.json({ error: "Add website content before deploying." }, { status: 400 });
+
+  let savedToken = "";
+  if (project.encrypted_vercel_token) {
+    try {
+      savedToken = decryptIntegrationKey(project.encrypted_vercel_token);
+    } catch {
+      return NextResponse.json({ error: "Could not read the saved Vercel token. Check the integration encryption configuration." }, { status: 500 });
+    }
+  }
+  const token = suppliedToken || savedToken;
+  if (!token) {
+    return NextResponse.json({ error: "Enter a Vercel access token for the first deployment." }, { status: 400 });
+  }
 
   const name = projectName(project.name, project.id);
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -142,7 +157,23 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Vercel accepted the deployment but returned no deployment URL." }, { status: 502 });
     }
 
-    return NextResponse.json({ url: `https://${deployment.url}`, projectName: name });
+    let tokenSaved = Boolean(savedToken);
+    if (suppliedToken && suppliedToken !== savedToken) {
+      try {
+        const { data: savedProject, error: saveError } = await supabase
+          .from("projects")
+          .update({ encrypted_vercel_token: encryptIntegrationKey(suppliedToken) })
+          .eq("id", projectId)
+          .eq("owner_id", ownerId)
+          .select("id")
+          .maybeSingle();
+        tokenSaved = !saveError && Boolean(savedProject);
+      } catch {
+        tokenSaved = false;
+      }
+    }
+
+    return NextResponse.json({ url: `https://${deployment.url}`, projectName: name, tokenSaved });
   } catch {
     return NextResponse.json(
       { error: "Could not reach Vercel. Check your connection and try again." },

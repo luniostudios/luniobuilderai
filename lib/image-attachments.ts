@@ -1,10 +1,7 @@
-export type ImageIntent = "reference" | "use";
-
 export type ImageAttachment = {
   name: string;
   mimeType: "image/webp";
   data: string;
-  intent: ImageIntent;
 };
 
 export const MAX_IMAGE_ATTACHMENTS = 4;
@@ -22,8 +19,7 @@ export function parseImageAttachments(value: unknown): ImageAttachment[] | null 
       !item || typeof item !== "object" ||
       !("name" in item) || typeof item.name !== "string" ||
       !("mimeType" in item) || item.mimeType !== "image/webp" ||
-      !("data" in item) || typeof item.data !== "string" ||
-      !("intent" in item) || (item.intent !== "reference" && item.intent !== "use")
+      !("data" in item) || typeof item.data !== "string"
     ) return null;
 
     const data = item.data.replace(/^data:image\/webp;base64,/, "");
@@ -35,7 +31,6 @@ export function parseImageAttachments(value: unknown): ImageAttachment[] | null 
       name: item.name.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 160),
       mimeType: "image/webp",
       data,
-      intent: item.intent,
     });
   }
 

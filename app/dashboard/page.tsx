@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import type { Database } from "@/lib/database.types";
 import { getSupabaseAdmin } from "@/lib/db";
 import { getUserProjectLimit } from "@/lib/project-limits";
+import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 import Dashboard from "@/app/components/dashboard/Dashboard";
 import AppHeader from "../components/home/AppHeader";
 
@@ -20,7 +21,7 @@ export default async function DashboardPage({
   const [projectsResult, accountLimit] = await Promise.all([
     getSupabaseAdmin()
       .from("projects")
-      .select("*")
+      .select(PROJECT_CLIENT_COLUMNS)
       .eq("owner_id", session.user.id)
       .order("updated_date", { ascending: false }),
     getUserProjectLimit(session.user.id),

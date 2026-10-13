@@ -3,6 +3,7 @@ import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
 import { normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { normalizeSiteMetadata, toSiteMetadataJson } from "@/lib/site-metadata";
+import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -13,7 +14,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const { projectId } = await params;
   const { data, error } = await getSupabaseAdmin()
     .from("projects")
-    .select("*")
+    .select(PROJECT_CLIENT_COLUMNS)
     .eq("id", projectId)
     .eq("owner_id", ownerId)
     .maybeSingle();
@@ -63,7 +64,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     .update(updates)
     .eq("id", projectId)
     .eq("owner_id", ownerId)
-    .select("*")
+    .select(PROJECT_CLIENT_COLUMNS)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: "Could not update project" }, { status: 500 });

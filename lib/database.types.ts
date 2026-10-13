@@ -52,6 +52,7 @@ export type Database = {
           html: string;
           cms_data: Json;
           site_metadata: Json;
+          encrypted_vercel_token: string | null;
           published_slug: string | null;
           published_at: string | null;
           created_date: string;
@@ -64,6 +65,7 @@ export type Database = {
           html?: string;
           cms_data?: Json;
           site_metadata?: Json;
+          encrypted_vercel_token?: string | null;
           published_slug?: string | null;
           published_at?: string | null;
           created_date?: string;
@@ -76,6 +78,7 @@ export type Database = {
           html?: string;
           cms_data?: Json;
           site_metadata?: Json;
+          encrypted_vercel_token?: string | null;
           published_slug?: string | null;
           published_at?: string | null;
           created_date?: string;
