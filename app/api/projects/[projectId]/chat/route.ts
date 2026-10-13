@@ -8,6 +8,7 @@ import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 import { baseprompt } from "./prompt";
 import { decryptIntegrationKey } from "@/lib/integrations";
 import { getModelOption, isModelId, MODEL_KEY_COLUMNS } from "@/lib/ai-models";
+import { normalizePrivatePath } from "@/lib/site-services";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 type Project = Database["public"]["Tables"]["projects"]["Row"];
@@ -22,7 +23,29 @@ type WebsiteUpdate = {
   reply: string;
   html: string;
   cmsData: unknown;
+  protectedPages: unknown;
 };
+
+type ProtectedPage = { path: string; title: string; html: string; accessMode: "members" | "password" };
+
+function normalizeProtectedPages(value: unknown): ProtectedPage[] | null {
+  if (!Array.isArray(value) || value.length > 20) return null;
+  const pages: ProtectedPage[] = [];
+  const paths = new Set<string>();
+  let totalHtmlLength = 0;
+  for (const item of value) {
+    if (!item || typeof item !== "object" || !("path" in item) || typeof item.path !== "string" || !("title" in item) || typeof item.title !== "string" || !("html" in item) || typeof item.html !== "string" || !("accessMode" in item) || (item.accessMode !== "members" && item.accessMode !== "password")) return null;
+    const path = normalizePrivatePath(item.path);
+    const html = item.html.trim();
+    const title = item.title.trim();
+    if (!path || path === "/auth" || path.startsWith("/auth/") || path === "/api" || path.startsWith("/api/") || !title || title.length > 120 || !html.toLowerCase().includes("<html") || html.length > 120000 || paths.has(path)) return null;
+    totalHtmlLength += html.length;
+    if (totalHtmlLength > 800000) return null;
+    paths.add(path);
+    pages.push({ path, title, html, accessMode: item.accessMode });
+  }
+  return pages;
+}
 
 function containsCredential(message: string): boolean {
   return [
@@ -84,8 +107,22 @@ const RESPONSE_SCHEMA = {
       required: ["collections"],
       additionalProperties: false,
     },
+    protectedPages: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          title: { type: "string" },
+          html: { type: "string" },
+          accessMode: { type: "string", enum: ["members", "password"] },
+        },
+        required: ["path", "title", "html", "accessMode"],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ["name", "reply", "html", "cmsData"],
+  required: ["name", "reply", "html", "cmsData", "protectedPages"],
   additionalProperties: false,
 };
 
@@ -95,6 +132,7 @@ function isWebsiteUpdate(value: unknown): value is WebsiteUpdate {
     "name" in value && typeof value.name === "string" &&
     "reply" in value && typeof value.reply === "string" &&
     "html" in value && typeof value.html === "string" &&
+    "protectedPages" in value && Array.isArray(value.protectedPages) &&
     "cmsData" in value && normalizeCmsData(value.cmsData) !== null
   );
 }
@@ -178,6 +216,12 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!project) return NextResponse.json({ error: "Website not found." }, { status: 404 });
   const currentProject = project as unknown as Project;
 
+  const { data: currentProtectedPages, error: protectedPagesError } = await supabase
+    .from("site_private_pages")
+    .select("path, title, html, access_mode, password_salt, password_hash")
+    .eq("project_id", projectId);
+  if (protectedPagesError) return NextResponse.json({ error: "Could not load protected pages." }, { status: 500 });
+
   const { data: integrations, error: integrationsError } = await supabase
     .from("project_integrations")
     .select("provider")
@@ -245,11 +289,14 @@ export async function POST(request: Request, { params }: RouteContext) {
   }, []);
   const systemPrompt = [
     baseprompt,
-    "Return only one valid JSON object with exactly four fields: name (string), reply (string), html (string), and cmsData (an object with a collections array). Do not wrap it in markdown.",
-    `Project id: ${projectId}\nConfigured server-side API integrations: ${configuredIntegrations.join(", ") || "none"}.`,
+    "Return only one valid JSON object with exactly five fields: name (string), reply (string), html (string), cmsData (an object with a collections array), and protectedPages (an array of private page objects). Do not wrap it in markdown.",
+    "Use the conversation history to understand follow-up answers and build without repeating answered questions. Build now when reasonable assumptions are enough; ask only for information that is essential to fulfill the request. For a clarification-only turn, put the concise question in reply, set html to an empty string, and return cmsData and protectedPages unchanged. Empty html means no project changes; after the user answers, return the complete updated HTML document and protectedPages array.",
+    "Visitor authentication uses the site's Supabase Auth service and protectedPages are served only by the server. Keep private HTML out of the public html string. For newsletters and stores, use the exact published-site endpoint contract in the system instructions; do not fake API success.",
+    `Project id: ${projectId}\nConfigured server-side API integrations: ${configuredIntegrations.join(", ") || "none"}. Newsletter signup, visitor accounts, protected pages, product catalog, and Stripe checkout use built-in services on the dedicated published-site domain.`,
     `Unsplash search endpoint: /api/projects/${projectId}/integrations/unsplash/search?query=...`,
     `Current complete HTML (empty means this is a new website):\n${currentProject.html.slice(0, 120000) || "(empty)"}`,
     `Current CMS data:\n${JSON.stringify(currentProject.cms_data ?? { collections: [] }).slice(0, 60000)}`,
+    `Current private pages (keep each page's existing path and accessMode unless asked to change them; include their complete HTML when returning a website update):\n${JSON.stringify((currentProtectedPages ?? []).map((page) => ({ path: page.path, title: page.title, html: page.html, accessMode: page.access_mode })).slice(0, 20)).slice(0, 160000)}`,
   ].join("\n\n");
 
   let providerResponse: Response;
@@ -438,6 +485,11 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!isWebsiteUpdate(update) || update.html.length > 1000000) {
     return NextResponse.json({ error: "The AI returned an invalid or oversized website." }, { status: 502 });
   }
+  if (!update.reply.trim()) {
+    return NextResponse.json({ error: "The AI returned no chat reply. Please try again." }, { status: 502 });
+  }
+  const protectedPages = normalizeProtectedPages(update.protectedPages);
+  if (!protectedPages) return NextResponse.json({ error: "The AI returned invalid protected pages. Please try again." }, { status: 502 });
 
   let updatedProject: Project = currentProject;
   if (update.html.trim()) {
@@ -449,6 +501,31 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "The generated website with attached images is too large. Try smaller images." }, { status: 502 });
     }
     const name = update.name.trim().slice(0, 120) || currentProject.name;
+    const existingPageHashes = new Map((currentProtectedPages ?? []).map((page) => [page.path, page]));
+    const privatePageRows = protectedPages.map((page) => {
+      const existing = existingPageHashes.get(page.path);
+      const keepsPassword = page.accessMode === "password" && existing?.access_mode === "password";
+      return {
+        project_id: projectId,
+        path: page.path,
+        title: page.title,
+        html: page.html,
+        access_mode: page.accessMode,
+        password_salt: keepsPassword ? existing.password_salt : null,
+        password_hash: keepsPassword ? existing.password_hash : null,
+        updated_at: new Date().toISOString(),
+      };
+    });
+    if (privatePageRows.length) {
+      const { error: privatePageSaveError } = await supabase.from("site_private_pages").upsert(privatePageRows, { onConflict: "project_id,path" });
+      if (privatePageSaveError) return NextResponse.json({ error: "Could not save protected pages." }, { status: 500 });
+    }
+    const retainedPaths = new Set(protectedPages.map((page) => page.path));
+    const obsoletePaths = (currentProtectedPages ?? []).map((page) => page.path).filter((path) => !retainedPaths.has(path));
+    if (obsoletePaths.length) {
+      const { error: obsoleteDeleteError } = await supabase.from("site_private_pages").delete().eq("project_id", projectId).in("path", obsoletePaths);
+      if (obsoleteDeleteError) return NextResponse.json({ error: "Could not remove obsolete protected pages." }, { status: 500 });
+    }
     const { data, error: updateError } = await supabase
       .from("projects")
       .update({ name, html, cms_data: toCmsJson(normalizeCmsData(update.cmsData)!), updated_date: new Date().toISOString() })
@@ -469,7 +546,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       project_id: projectId,
       owner_id: ownerId,
       role: "assistant",
-      content: update.reply.trim().slice(0, 4000) || "Your website is ready.",
+      content: update.reply.trim().slice(0, 4000),
     })
     .select("*")
     .single();

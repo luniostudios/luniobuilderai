@@ -5,12 +5,16 @@ import { getSupabaseAdmin } from "@/lib/db";
 
 type RouteContext = { params: Promise<{ projectId: string; provider: string }> };
 
+function isProvider(value: string): value is "unsplash" | "resend" {
+  return value === "unsplash" || value === "resend";
+}
+
 export async function GET(_request: Request, { params }: RouteContext) {
   const ownerId = await getAuthenticatedUserId();
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { projectId, provider } = await params;
-  if (provider !== "unsplash") return NextResponse.json({ error: "Unsupported integration." }, { status: 404 });
+  if (!isProvider(provider)) return NextResponse.json({ error: "Unsupported integration." }, { status: 404 });
 
   const supabase = getSupabaseAdmin();
   const { data: project, error: projectError } = await supabase
@@ -48,15 +52,18 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { projectId, provider } = await params;
-  if (provider !== "unsplash") return NextResponse.json({ error: "Unsupported integration." }, { status: 404 });
+  if (!isProvider(provider)) return NextResponse.json({ error: "Unsupported integration." }, { status: 404 });
 
   const body: unknown = await request.json().catch(() => null);
   if (!body || typeof body !== "object" || !("key" in body) || typeof body.key !== "string") {
-    return NextResponse.json({ error: "Enter a valid Unsplash access key." }, { status: 400 });
+    return NextResponse.json({ error: `Enter a valid ${provider === "resend" ? "Resend API" : "Unsplash access"} key.` }, { status: 400 });
   }
   const key = body.key.trim();
-  if (key.length < 8 || key.length > 512 || /\s/.test(key)) {
-    return NextResponse.json({ error: "Enter a valid Unsplash access key." }, { status: 400 });
+  const validKey = provider === "resend"
+    ? /^re_[A-Za-z0-9_]{16,}$/.test(key)
+    : key.length >= 8 && key.length <= 512 && !/\s/.test(key);
+  if (!validKey || key.length > 512) {
+    return NextResponse.json({ error: `Enter a valid ${provider === "resend" ? "Resend API" : "Unsplash access"} key.` }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();
@@ -71,19 +78,25 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   let keyCheck: Response;
   try {
-    keyCheck = await fetch("https://api.unsplash.com/search/photos?query=validation&per_page=1", {
+    keyCheck = provider === "resend"
+      ? await fetch("https://api.resend.com/domains", {
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(10000),
+        cache: "no-store",
+      })
+      : await fetch("https://api.unsplash.com/search/photos?query=validation&per_page=1", {
       headers: { Authorization: `Client-ID ${key}`, "Accept-Version": "v1" },
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
     });
   } catch {
-    return NextResponse.json({ error: "Could not verify the Unsplash key. Try again shortly." }, { status: 502 });
+    return NextResponse.json({ error: `Could not verify the ${provider === "resend" ? "Resend" : "Unsplash"} key. Try again shortly.` }, { status: 502 });
   }
   if (keyCheck.status === 401 || keyCheck.status === 403) {
-    return NextResponse.json({ error: "Unsplash rejected this access key. Check the key and try again." }, { status: 400 });
+    return NextResponse.json({ error: `${provider === "resend" ? "Resend" : "Unsplash"} rejected this key. Check it and try again.` }, { status: 400 });
   }
   if (!keyCheck.ok) {
-    return NextResponse.json({ error: "Unsplash could not verify this key right now." }, { status: 502 });
+    return NextResponse.json({ error: `${provider === "resend" ? "Resend" : "Unsplash"} could not verify this key right now.` }, { status: 502 });
   }
 
   let encryptedKey: string;
@@ -110,7 +123,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { projectId, provider } = await params;
-  if (provider !== "unsplash") return NextResponse.json({ error: "Unsupported integration." }, { status: 404 });
+  if (!isProvider(provider)) return NextResponse.json({ error: "Unsupported integration." }, { status: 404 });
 
   const { error } = await getSupabaseAdmin()
     .from("project_integrations")

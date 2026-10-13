@@ -5,6 +5,7 @@ import { Globe, Loader2, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_SITE_METADATA, normalizeSiteMetadata, type SiteMetadata } from "@/lib/site-metadata";
 import type { Database } from "@/lib/database.types";
+import ProjectServices from "./ProjectServices";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 
@@ -141,6 +142,7 @@ export default function ProjectSettings({ project, onProjectUpdated }: Props) {
             </div>
           </div>
         </form>
+        <ProjectServices projectId={project.id} publishedSlug={project.published_slug} />
       </div>
     </section>
   );

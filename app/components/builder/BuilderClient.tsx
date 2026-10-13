@@ -524,23 +524,29 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
           {showPublishMenu && (
             <div className="absolute top-full right-0 mt-1 px-4 w-48 bg-black border border-gray-700 rounded-sm shadow-2xl py-2 z-50">
-              <button
-                onClick={published ? handleUnpublish : handlePublish}
-                disabled={!project || isPublishing}
-                className={`w-full flex items-center gap-2 px-2 py-2 text-xs ${project ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 cursor-not-allowed'} transition-colors`}
-              >
-                <Globe size={12} />
-                Publish to LUNIO
-                {project.published_slug && (
-                    <a
-                      href={`/sites/${project.published_slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                  )}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={published ? handleUnpublish : handlePublish}
+                  disabled={!project || isPublishing}
+                  className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-xs ${project ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 cursor-not-allowed'} transition-colors`}
+                >
+                  <Globe size={12} />
+                  Publish to LUNIO
                 </button>
+                {project.published_slug && (
+                  <a
+                    href={process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN
+                      ? `https://${project.published_slug}.${process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN.replace(/^https?:\/\//, "").split("/")[0]}`
+                      : `/sites/${project.published_slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Open published site"
+                    className="px-2 py-2 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  >
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
               <button
                 onClick={() => setShowVercelDialog(true)}
                 className="w-full flex items-center gap-2 px-2 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
@@ -813,7 +819,6 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                   <ImageAttachments images={draftImages} onChange={setDraftImages} disabled={generating} compact />
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 px-3 pb-2.5">
-                  <ModelSelector compact dark={false} />
                   <div className="flex items-center gap-3">
                     <span className="text-[10px]">Enter to send · Shift + Enter for a new line</span>
                     <Button type="submit" size="icon" aria-label="Send message" disabled={generating || (!draft.trim() && !draftImages.length)} className="h-8 w-8 rounded-full">

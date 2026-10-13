@@ -32,7 +32,9 @@ const Templates = ({ projects }: { projects: Project[] }) => {
                   </div>
                   <p className='mt-3 text-sm leading-6 text-[#555b53]'>Created {new Date(project.created_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
-                <Link href={`/sites/${project.published_slug}`} className='block border-t border-black/10 px-5 py-3 text-sm font-medium text-[#557b1c] transition-colors hover:text-[#36520d]'>View project <span aria-hidden='true'>→</span></Link>
+                <Link href={process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN
+                  ? `https://${project.published_slug}.${process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN.replace(/^https?:\/\//, '').split('/')[0]}`
+                  : `/sites/${project.published_slug}`} className='block border-t border-black/10 px-5 py-3 text-sm font-medium text-[#557b1c] transition-colors hover:text-[#36520d]'>View project <span aria-hidden='true'>→</span></Link>
               </article>
             ))}
             {projects.length === 0 && <p className='text-sm text-[#555b53]'>No published projects yet.</p>}
