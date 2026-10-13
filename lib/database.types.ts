@@ -137,6 +137,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_model_settings: {
+        Row: {
+          owner_id: string;
+          selected_model: string;
+          encrypted_google_key: string | null;
+          encrypted_openai_key: string | null;
+          encrypted_anthropic_key: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          owner_id: string;
+          selected_model?: string;
+          encrypted_google_key?: string | null;
+          encrypted_openai_key?: string | null;
+          encrypted_anthropic_key?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          owner_id?: string;
+          selected_model?: string;
+          encrypted_google_key?: string | null;
+          encrypted_openai_key?: string | null;
+          encrypted_anthropic_key?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

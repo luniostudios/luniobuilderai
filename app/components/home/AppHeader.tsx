@@ -75,7 +75,7 @@ async function DesktopAccountControl({ user }: AppHeaderProps) {
     if (!session?.user) {
         return (
             <li>
-                <Link href="/login" className="flex flex-row text-white border justify-center border-white/20 rounded-full px-3 py-1 items-center gap-2 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <Link href="/login" className="flex flex-row text-white border justify-center border-white/20 rounded-sm px-3 py-1 items-center gap-2 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     <User size={16} />
                     Sign In
                 </Link>

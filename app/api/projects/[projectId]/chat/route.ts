@@ -6,10 +6,16 @@ import { normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { parseImageAttachments } from "@/lib/image-attachments";
 import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 import { baseprompt } from "./prompt";
+import { decryptIntegrationKey } from "@/lib/integrations";
+import { getModelOption, isModelId, MODEL_KEY_COLUMNS } from "@/lib/ai-models";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type Message = Database["public"]["Tables"]["messages"]["Row"];
+type AnthropicBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: "image/webp"; data: string } };
+type AnthropicMessage = { role: "user" | "assistant"; content: AnthropicBlock[] };
 
 type WebsiteUpdate = {
   name: string;
@@ -97,12 +103,43 @@ export async function POST(request: Request, { params }: RouteContext) {
   const ownerId = await getAuthenticatedUserId();
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "AI generation is not configured. Add GEMINI_API_KEY to your server environment." },
-      { status: 503 }
-    );
+  const supabase = getSupabaseAdmin();
+  const { data: modelSettings, error: modelSettingsError } = await supabase
+    .from("user_model_settings")
+    .select("selected_model, encrypted_google_key, encrypted_openai_key, encrypted_anthropic_key")
+    .eq("owner_id", ownerId)
+    .maybeSingle();
+  if (modelSettingsError) return NextResponse.json({ error: "Could not load your model settings." }, { status: 500 });
+
+  const selectedModelId = modelSettings?.selected_model ?? "auto";
+  if (!isModelId(selectedModelId)) {
+    return NextResponse.json({ error: "Your selected model is unsupported. Choose a model again in the prompt selector." }, { status: 500 });
+  }
+  const selectedModel = getModelOption(selectedModelId);
+  if (!selectedModel) return NextResponse.json({ error: "Your selected model is unsupported." }, { status: 500 });
+
+  let apiKey: string;
+  if (!selectedModel.provider) {
+    apiKey = process.env.GEMINI_API_KEY ?? "";
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "AI generation is not configured. Add GEMINI_API_KEY to your server environment." },
+        { status: 503 },
+      );
+    }
+  } else {
+    const encryptedKey = modelSettings?.[MODEL_KEY_COLUMNS[selectedModel.provider]];
+    if (!encryptedKey) {
+      return NextResponse.json({
+        error: `Add your ${selectedModel.provider === "google" ? "Google Gemini" : selectedModel.provider === "openai" ? "OpenAI" : "Anthropic"} API key in profile settings before using this model.`,
+        code: "MODEL_API_KEY_REQUIRED",
+      }, { status: 400 });
+    }
+    try {
+      apiKey = decryptIntegrationKey(encryptedKey);
+    } catch {
+      return NextResponse.json({ error: "Your saved model API key cannot be decrypted. Re-enter it in profile settings." }, { status: 500 });
+    }
   }
 
   const body: unknown = await request.json().catch(() => null);
@@ -130,7 +167,6 @@ export async function POST(request: Request, { params }: RouteContext) {
   const savedMessage = `${body.message.trim()}${attachments.length ? `\n\n[Attached ${attachments.length} image${attachments.length === 1 ? "" : "s"}: ${attachments.map((image) => image.name).join(", ")}]` : ""}`;
 
   const { projectId } = await params;
-  const supabase = getSupabaseAdmin();
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select(PROJECT_CLIENT_COLUMNS)
@@ -160,18 +196,20 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (historyError) return NextResponse.json({ error: "Could not load chat history." }, { status: 500 });
 
-  const { data: generationAllowed, error: generationLimitError } = await supabase.rpc(
-    "reserve_daily_generation",
-    { p_owner_id: ownerId },
-  );
-  if (generationLimitError) {
-    return NextResponse.json({ error: "Could not verify your daily generation limit." }, { status: 500 });
-  }
-  if (!generationAllowed) {
-    return NextResponse.json(
-      { error: "Free accounts can use up to 5 AI generations per day. Your daily limit resets at midnight UTC." },
-      { status: 429 },
+  if (!selectedModel.provider) {
+    const { data: generationAllowed, error: generationLimitError } = await supabase.rpc(
+      "reserve_daily_generation",
+      { p_owner_id: ownerId },
     );
+    if (generationLimitError) {
+      return NextResponse.json({ error: "Could not verify your daily generation limit." }, { status: 500 });
+    }
+    if (!generationAllowed) {
+      return NextResponse.json(
+        { error: "Free accounts can use up to 5 AI generations per day. Your daily limit resets at midnight UTC." },
+        { status: 429 },
+      );
+    }
   }
 
   const { data: userMessage, error: insertError } = await supabase
@@ -191,8 +229,23 @@ export async function POST(request: Request, { params }: RouteContext) {
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content.slice(-8000) }],
   }));
+  const openAiHistory = ((priorMessages ?? []) as Message[]).reverse().map((message) => ({
+    role: message.role,
+    content: message.content.slice(-8000),
+  }));
+  const anthropicHistory = ((priorMessages ?? []) as Message[]).reverse().reduce<AnthropicMessage[]>((history, message) => {
+    const lastMessage = history[history.length - 1];
+    const textBlock = { type: "text" as const, text: message.content.slice(-8000) };
+    if (lastMessage?.role === message.role) {
+      lastMessage.content.push(textBlock);
+    } else {
+      history.push({ role: message.role, content: [textBlock] });
+    }
+    return history;
+  }, []);
   const systemPrompt = [
     baseprompt,
+    "Return only one valid JSON object with exactly four fields: name (string), reply (string), html (string), and cmsData (an object with a collections array). Do not wrap it in markdown.",
     `Project id: ${projectId}\nConfigured server-side API integrations: ${configuredIntegrations.join(", ") || "none"}.`,
     `Unsplash search endpoint: /api/projects/${projectId}/integrations/unsplash/search?query=...`,
     `Current complete HTML (empty means this is a new website):\n${currentProject.html.slice(0, 120000) || "(empty)"}`,
@@ -200,87 +253,169 @@ export async function POST(request: Request, { params }: RouteContext) {
   ].join("\n\n");
 
   let providerResponse: Response;
+  const provider = selectedModel.provider ?? "google";
   try {
-    const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-    providerResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-      method: "POST",
-      headers: {
-        "x-goog-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [
-          ...history,
-          {
-            role: "user",
-            parts: [
-              { text: `${body.message.trim()}${attachmentInstructions}` },
-              ...attachments.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } })),
+    if (provider === "google") {
+      const model = selectedModel.provider ? selectedModel.id : process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+      providerResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [
+              ...history,
+              {
+                role: "user",
+                parts: [
+                  { text: `${body.message.trim()}${attachmentInstructions}` },
+                  ...attachments.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } })),
+                ],
+              },
             ],
-          },
-        ],
-        generationConfig: {
-          responseFormat: {
-            text: { mimeType: "APPLICATION_JSON", schema: RESPONSE_SCHEMA },
-          },
-          maxOutputTokens: 24000,
+            generationConfig: {
+              responseFormat: {
+                text: { mimeType: "APPLICATION_JSON", schema: RESPONSE_SCHEMA },
+              },
+              maxOutputTokens: 24000,
+            },
+          }),
+          signal: AbortSignal.timeout(90000),
         },
-      }),
-      signal: AbortSignal.timeout(90000),
+      );
+    } else if (provider === "openai") {
+      providerResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: selectedModel.id,
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...openAiHistory,
+            {
+              role: "user",
+              content: [
+                { type: "text", text: `${body.message.trim()}${attachmentInstructions}` },
+                ...attachments.map((image) => ({
+                  type: "image_url",
+                  image_url: { url: `data:${image.mimeType};base64,${image.data}` },
+                })),
+              ],
+            },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 24000,
+        }),
+        signal: AbortSignal.timeout(90000),
+      });
+    } else {
+      const userContent: AnthropicBlock[] = [
+        { type: "text", text: `${body.message.trim()}${attachmentInstructions}` },
+        ...attachments.map((image) => ({
+          type: "image" as const,
+          source: { type: "base64" as const, media_type: image.mimeType, data: image.data },
+        })),
+      ];
+      const anthropicMessages = [...anthropicHistory];
+      const lastMessage = anthropicMessages[anthropicMessages.length - 1];
+      if (lastMessage?.role === "user") {
+        lastMessage.content.push(...userContent);
+      } else {
+        anthropicMessages.push({ role: "user", content: userContent });
       }
-    );
+      providerResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: selectedModel.id,
+          system: systemPrompt,
+          messages: anthropicMessages,
+          max_tokens: 24000,
+        }),
+        signal: AbortSignal.timeout(90000),
+      });
+    }
   } catch {
-    return NextResponse.json({ error: "Could not reach the Gemini API. Please try again." }, { status: 502 });
+    const providerName = provider === "google" ? "Gemini" : provider === "openai" ? "OpenAI" : "Anthropic";
+    return NextResponse.json({ error: `Could not reach the ${providerName} API. Please try again.` }, { status: 502 });
   }
 
   if (!providerResponse.ok) {
     const providerError: unknown = await providerResponse.json().catch(() => null);
-    const errorMessage =
+    const errorObject =
       providerError && typeof providerError === "object" && "error" in providerError &&
-      providerError.error && typeof providerError.error === "object" && "message" in providerError.error &&
-      typeof providerError.error.message === "string"
-        ? providerError.error.message.slice(0, 500)
-        : `HTTP ${providerResponse.status}`;
+      providerError.error && typeof providerError.error === "object"
+        ? providerError.error
+        : providerError;
+    const errorMessage = errorObject && typeof errorObject === "object" && "message" in errorObject &&
+      typeof errorObject.message === "string" ? errorObject.message.slice(0, 500) : `HTTP ${providerResponse.status}`;
+    const providerName = provider === "google" ? "Gemini" : provider === "openai" ? "OpenAI" : "Anthropic";
     return NextResponse.json(
-      { error: `Gemini API request failed: ${errorMessage}` },
+      { error: `${providerName} API request failed: ${errorMessage}` },
       { status: 502 }
     );
   }
 
   const completion: unknown = await providerResponse.json().catch(() => null);
-  const candidates =
-    completion && typeof completion === "object" && "candidates" in completion &&
-    Array.isArray(completion.candidates)
-      ? completion.candidates
+  let content = "";
+  let finishReason: string | null = null;
+  if (provider === "google") {
+    const candidates =
+      completion && typeof completion === "object" && "candidates" in completion && Array.isArray(completion.candidates)
+        ? completion.candidates
+        : [];
+    const firstCandidate = candidates[0];
+    const candidateContent =
+      firstCandidate && typeof firstCandidate === "object" && "content" in firstCandidate
+        ? firstCandidate.content
+        : null;
+    const parts =
+      candidateContent && typeof candidateContent === "object" && "parts" in candidateContent && Array.isArray(candidateContent.parts)
+        ? candidateContent.parts
+        : [];
+    content = parts
+      .map((part: unknown) => part && typeof part === "object" && "text" in part && typeof part.text === "string" ? part.text : "")
+      .join("");
+    finishReason =
+      firstCandidate && typeof firstCandidate === "object" && "finishReason" in firstCandidate &&
+      typeof firstCandidate.finishReason === "string" ? firstCandidate.finishReason : null;
+  } else if (provider === "openai") {
+    const choices =
+      completion && typeof completion === "object" && "choices" in completion && Array.isArray(completion.choices)
+      ? completion.choices
       : [];
-  const firstCandidate = candidates[0];
-  const candidateContent =
-    firstCandidate && typeof firstCandidate === "object" && "content" in firstCandidate
-      ? firstCandidate.content
-      : null;
-  const parts =
-    candidateContent && typeof candidateContent === "object" && "parts" in candidateContent &&
-    Array.isArray(candidateContent.parts)
-      ? candidateContent.parts
+    const choice = choices[0];
+    const message = choice && typeof choice === "object" && "message" in choice ? choice.message : null;
+    content = message && typeof message === "object" && "content" in message && typeof message.content === "string"
+      ? message.content : "";
+    finishReason =
+      choice && typeof choice === "object" && "finish_reason" in choice && typeof choice.finish_reason === "string"
+      ? choice.finish_reason : null;
+  } else {
+    const responseContent =
+      completion && typeof completion === "object" && "content" in completion && Array.isArray(completion.content)
+      ? completion.content
       : [];
-  const content = parts
-    .map((part: unknown) =>
-      part && typeof part === "object" && "text" in part && typeof part.text === "string"
-        ? part.text
-        : ""
-    )
-    .join("");
+    content = responseContent
+      .map((part: unknown) => part && typeof part === "object" && "text" in part && typeof part.text === "string" ? part.text : "")
+      .join("");
+    finishReason =
+      completion && typeof completion === "object" && "stop_reason" in completion &&
+      typeof completion.stop_reason === "string" ? completion.stop_reason : null;
+  }
 
-  const finishReason =
-    firstCandidate && typeof firstCandidate === "object" && "finishReason" in firstCandidate &&
-    typeof firstCandidate.finishReason === "string"
-      ? firstCandidate.finishReason
-      : null;
-
-  if (finishReason === "MAX_TOKENS") {
+  if (finishReason === "MAX_TOKENS" || finishReason === "length" || finishReason === "max_tokens") {
     return NextResponse.json(
       { error: "The AI response was cut off before the website was complete. Try again with a shorter request." },
       { status: 502 }
@@ -288,7 +423,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   if (!content.trim()) {
-    return NextResponse.json({ error: "Gemini returned an empty response. Please try again." }, { status: 502 });
+    const providerName = provider === "google" ? "Gemini" : provider === "openai" ? "OpenAI" : "Anthropic";
+    return NextResponse.json({ error: `${providerName} returned an empty response. Please try again.` }, { status: 502 });
   }
 
   let update: unknown;

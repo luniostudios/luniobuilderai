@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ImagePlus, Loader2, Save } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ModelApiKeys from "@/app/components/dashboard/ModelApiKeys";
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -115,6 +116,7 @@ export default function ProfileSettings({ name, image }: { name: string; image: 
           {saving ? "Saving..." : "Save changes"}
         </button>
       </form>
+      <ModelApiKeys />
     </section>
   );
 }

@@ -32,7 +32,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="text-white/50 flex flex-row gap-3 items-center text-xs max-md:flex-col max-md:text-lg" aria-label="How it works">
+          <section className="text-white/50 flex flex-row gap-3 items-center text-xs max-md:hidden" aria-label="How it works">
             <span className="bottom-line-label">FROM FIRST THOUGHT TO FIRST DRAFT</span>
             <div><span>01</span> Describe your idea</div>
             <span className="text-white/50 max-md:rotate-90">→</span>

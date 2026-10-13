@@ -3,9 +3,11 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { ArrowUp, Loader2, Sparkles } from "lucide-react";
 import type { Database } from "@/lib/database.types";
 import ImageAttachments from "@/app/components/home/ImageAttachments";
+import ModelSelector from "@/app/components/home/ModelSelector";
 import type { ImageAttachment } from "@/lib/image-attachments";
 import { Button } from "@/components/ui/button";
 
@@ -89,7 +91,7 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
             <form onSubmit={handleGenerate}>
 
                 <div className="rounded-sm border border-dashed border-white/15 p-3 shadow-[0_24px_100px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-                    <button type="button" onClick={() => void handleEnhance()} disabled={creating || enhancing || limitReached || status === "loading" || !prompt.trim()} className="absolute right-5 inline-flex items-center gap-2 rounded-sm border border-white/15 px-3 py-2.5 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-35">
+                    <button type="button" title="Enhance Prompt" onClick={() => void handleEnhance()} disabled={creating || enhancing || limitReached || status === "loading" || !prompt.trim()} className="absolute right-5 inline-flex items-center gap-2 rounded-sm border border-white/15 px-3 py-2.5 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-35">
                         {enhancing ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                     </button>
                     <textarea
@@ -104,8 +106,9 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
                     />
                     <ImageAttachments images={images} onChange={setImages} disabled={creating || limitReached} />
                     <div className="flex flex-wrap items-center mt-3 justify-between border-t border-white/10 px-2 pt-3 sm:px-3">
-                        <span className="text-sm text-white/30">{prompt.length ? `${prompt.length} / 8000` : "Press enter to create"}</span>
+                        <span className="text-sm text-white/30 mb-2">{prompt.length ? `${prompt.length} / 8000` : "Press enter to create"}</span>
                         <div className="flex flex-row gap-3">
+                            <ModelSelector compact />
                             <button type="submit" disabled={creating || enhancing || limitReached || status === "loading" || (!prompt.trim() && !images.length)} className="inline-flex items-center gap-2 rounded-sm bg-[#b8f36b] px-4 py-2.5 text-sm font-semibold text-[#10150c] transition hover:bg-[#d0ff91] disabled:cursor-not-allowed disabled:opacity-35">
                                 {creating ? <Loader2 size={17} className="animate-spin" /> : <ArrowUp size={17} />}
                                 {creating ? "Starting..." : status === "unauthenticated" ? "Generate Website" : "Generate Website"}
@@ -114,12 +117,12 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
                     </div>
                 </div>
                 <div className="flex flex-row gap-3 mt-5 items-center" aria-label="Prompt ideas">
-                    <span className="text-sm text-white/30">TRY</span>
+                    <span className="text-sm text-white/30 max-md:text-sm">TRY</span>
                     {starters.map((starter) => (
                         <button
                             key={starter.label}
                             type="button"
-                            className="rounded-sm border border-white/10 bg-white/2.5 px-3 py-2 text-left text-xs text-white/45 transition hover:border-white/25 hover:bg-white/7 hover:text-white/80"
+                            className="rounded-sm border max-md:text-[8px] border-white/10 bg-white/2.5 px-3 py-2 text-left text-xs text-white/45 transition hover:border-white/25 hover:bg-white/7 hover:text-white/80"
                             onClick={() => setPrompt(starter.prompt)}
                             disabled={creating || limitReached}
                         >
@@ -128,7 +131,12 @@ const PromptTextArea = ({ limitReached = false }: { limitReached?: boolean }) =>
                     ))}
                 </div>
                 {limitReached && <p className="prompt-error">You’ve reached your website limit. Delete a website to create another.</p>}
-                {error && <p role="alert" className="prompt-error">{error}</p>}
+                {error && (
+                    <p role="alert" className="prompt-error">
+                        {error}
+                        {error.includes("profile settings") && <> <Link href="/dashboard?tab=settings" className="underline underline-offset-2">Open profile settings.</Link></>}
+                    </p>
+                )}
             </form>
         </div>
     )

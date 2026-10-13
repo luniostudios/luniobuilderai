@@ -10,6 +10,7 @@ import CmsManager from "@/app/components/builder/CmsManager";
 import ProjectSettings from "@/app/components/builder/ProjectSettings";
 import ProjectCodeView from "@/app/components/builder/ProjectCodeView";
 import ProjectIntegrations from "@/app/components/builder/ProjectIntegrations";
+import ModelSelector from "@/app/components/home/ModelSelector";
 import { injectPreviewInspector, patchElementDelete, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
 import { injectCmsContent, normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { injectSiteMetadata } from "@/lib/site-metadata";
@@ -408,10 +409,10 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
         project?: Project;
       };
       if (!response.ok || !result.project || !result.userMessage || !result.assistantMessage) {
-        if (result.code === "SECRET_INPUT_REJECTED") {
+        if (result.code === "SECRET_INPUT_REJECTED" || result.code === "MODEL_API_KEY_REQUIRED") {
           setMessages((current) => current.filter((message) => message.id !== pendingId));
-          setDraft("");
-          setError(result.error || "Use the secure API integrations control to add an API key.");
+          if (result.code === "SECRET_INPUT_REJECTED") setDraft("");
+          setError(result.error || "Add the model API key in profile settings before continuing.");
           return;
         }
         throw new Error(result.error || "The website could not be updated.");
@@ -783,7 +784,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
               )}
             </div>
 
-            {error && <p role="alert" className="px-4 pb-2 text-xs leading-relaxed text-destructive">{error}</p>}
+            {error && (
+              <p role="alert" className="px-4 pb-2 text-xs leading-relaxed text-destructive">
+                {error}
+                {error.includes("profile settings") && <> <Link href="/dashboard?tab=settings" className="underline underline-offset-2">Open profile settings.</Link></>}
+              </p>
+            )}
             <ProjectIntegrations projectId={projectId} />
             <form onSubmit={handleSubmit} className="shrink-0 border-t border-border/70 p-3 sm:p-4">
               <div className="rounded-2xl border border-border/80 transition-colors focus-within:border-brand/50">
@@ -806,11 +812,14 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 <div className="px-3">
                   <ImageAttachments images={draftImages} onChange={setDraftImages} disabled={generating} compact />
                 </div>
-                <div className="flex items-center justify-between gap-3 px-3 pb-2.5">
-                  <span className="text-[10px]">Enter to send · Shift + Enter for a new line</span>
-                  <Button type="submit" size="icon" aria-label="Send message" disabled={generating || (!draft.trim() && !draftImages.length)} className="h-8 w-8 rounded-full">
-                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
+                <div className="flex flex-wrap items-center justify-between gap-3 px-3 pb-2.5">
+                  <ModelSelector compact dark={false} />
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px]">Enter to send · Shift + Enter for a new line</span>
+                    <Button type="submit" size="icon" aria-label="Send message" disabled={generating || (!draft.trim() && !draftImages.length)} className="h-8 w-8 rounded-full">
+                      {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </form>
