@@ -88,7 +88,7 @@ export default function ModelSelector({ compact = false, dark = compact }: { com
     <div className={compact ? "flex flex-wrap items-center gap-3" : "space-y-2"}>
       <div className={compact ? "flex flex-wrap items-center gap-2" : "space-y-2"}>
         <HoverCard>
-          <HoverCardTrigger><IconHelpCircle className="text-white" size={16} stroke={2} /></HoverCardTrigger>
+          <HoverCardTrigger><IconHelpCircle className="text-white/20" size={16} stroke={2} /></HoverCardTrigger>
           <HoverCardContent className='w-72 flex flex-col gap-3 text-black rounded-xs p-4 bg-white border-2 border-blackshadow-lg'>
             <h2 className='text-md text-black font-bold'>Select the AI model you prefer.</h2>
             <hr />
