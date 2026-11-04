@@ -118,7 +118,7 @@ const INSPECTOR = String.raw`<style id="foundry-inspector-styles">
       borderRadius: "2px",
       outline: "none",
       resize: "none",
-      background: "#fff",
+      background: "#ffffff",
       color: computed.color,
       fontFamily: computed.fontFamily,
       fontSize: computed.fontSize,

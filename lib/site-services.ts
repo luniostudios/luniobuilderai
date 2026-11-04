@@ -15,7 +15,7 @@ export function getSiteAuthClient() {
 }
 
 export function getPublishedSiteOrigin(request: Request, slug: string): string | null {
-  const domainSetting = (process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN?.trim() || process.env.SITE_BASE_DOMAIN?.trim())?.toLowerCase();
+  const domainSetting = (process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN?.trim() || process.env.SITE_BASE_DOMAIN?.trim() || "luniobuilder.com").toLowerCase();
   if (!domainSetting) return null;
   const domain = domainSetting.replace(/^https?:\/\//, "").split("/")[0].replace(/:\d+$/, "");
   const host = (request.headers.get("host") ?? request.headers.get("x-forwarded-host") ?? new URL(request.url).host)

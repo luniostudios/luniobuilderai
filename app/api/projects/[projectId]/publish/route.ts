@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
@@ -15,6 +14,28 @@ function slugBase(name: string): string {
     .replace(/^-|-$/g, "")
     .slice(0, 48)
     .replace(/-$/g, "") || "website";
+}
+
+async function availableSlug(base: string, projectId: string): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  const firstSuffix = base === "www" ? 2 : 1;
+
+  for (let suffix = firstSuffix; suffix < firstSuffix + 1000; suffix += 1) {
+    const candidate = suffix === 1
+      ? base
+      : `${base.slice(0, 48 - String(suffix).length - 1)}-${suffix}`;
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("published_slug", candidate)
+      .neq("id", projectId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return candidate;
+  }
+
+  return null;
 }
 
 export async function POST(_request: Request, { params }: RouteContext) {
@@ -34,7 +55,15 @@ export async function POST(_request: Request, { params }: RouteContext) {
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
   if (!project.html.trim()) return NextResponse.json({ error: "Add website content before publishing" }, { status: 400 });
 
-  const publishedSlug = project.published_slug || `${slugBase(project.name)}-${randomUUID().slice(0, 8)}`;
+  let publishedSlug = project.published_slug;
+  if (!publishedSlug) {
+    try {
+      publishedSlug = await availableSlug(slugBase(project.name), projectId);
+    } catch {
+      return NextResponse.json({ error: "Could not reserve a site address" }, { status: 500 });
+    }
+    if (!publishedSlug) return NextResponse.json({ error: "Could not reserve a site address" }, { status: 409 });
+  }
   const { data, error } = await supabase
     .from("projects")
     .update({ published_slug: publishedSlug, published_at: new Date().toISOString(), updated_date: new Date().toISOString() })

@@ -79,7 +79,12 @@ export async function POST(request: Request, { params }: RouteContext) {
       type: "account_onboarding",
     });
     return NextResponse.json({ url: link.url });
-  } catch {
-    return NextResponse.json({ error: "Could not start Stripe onboarding. Check Stripe Connect settings and try again." }, { status: 502 });
+  } catch (error) {
+    console.error("Stripe Connect onboarding failed:", error);
+    const detail = error instanceof Error ? error.message : "Unknown Stripe error.";
+    const message = process.env.NODE_ENV === "development"
+      ? `Could not start Stripe onboarding: ${detail}`
+      : "Could not start Stripe onboarding. Check Stripe Connect settings and try again.";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

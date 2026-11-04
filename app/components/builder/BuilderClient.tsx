@@ -84,8 +84,6 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
   const [vercelTokenSaved, setVercelTokenSaved] = useState<boolean | null>(null);
   const initialPromptStartedRef = useRef(false);
   const [showPublishMenu, setShowPublishMenu] = useState(false);
-  const [published, setPublished] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -497,18 +495,18 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           <div className="flex items-center">
             <button
               onClick={() => setShowPublishMenu(!showPublishMenu)}
-              disabled={isPublishing}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-medium transition-all ${published
+              disabled={publishing}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-medium transition-all ${project?.published_slug
                 ? 'bg-green-600 text-white'
                 : 'bg-black text-white'
-                } ${isPublishing ? 'opacity-70 cursor-wait' : ''}`}
+                } ${publishing ? 'opacity-70 cursor-wait' : ''}`}
             >
-              {isPublishing ? (
+              {publishing ? (
                 <>
                   <Loader size={12} />
                   Publishing...
                 </>
-              ) : published ? (
+              ) : project?.published_slug ? (
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse" />
                   Published!
@@ -524,20 +522,18 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
 
           {showPublishMenu && (
             <div className="absolute top-full right-0 mt-1 px-4 w-48 bg-black border border-gray-700 rounded-sm shadow-2xl py-2 z-50">
-              {/**<div className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 <button
-                  onClick={published ? handleUnpublish : handlePublish}
-                  disabled={!project || isPublishing}
+                  onClick={project?.published_slug ? handleUnpublish : handlePublish}
+                  disabled={!project || publishing}
                   className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-xs ${project ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 cursor-not-allowed'} transition-colors`}
                 >
                   <Globe size={12} />
-                  Publish to LUNIO
+                  {project?.published_slug ? "Unpublish from LUNIO" : "Publish to LUNIO"}
                 </button>
-                {project.published_slug && (
+                {project?.published_slug && (
                   <a
-                    href={process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN
-                      ? `https://${project.published_slug}.${process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN.replace(/^https?:\/\//, "").split("/")[0]}`
-                      : `/sites/${project.published_slug}`}
+                    href={`https://${project.published_slug}.${(process.env.NEXT_PUBLIC_SITE_BASE_DOMAIN || "luniobuilder.com").replace(/^https?:\/\//, "").split("/")[0]}`}
                     target="_blank"
                     rel="noreferrer"
                     aria-label="Open published site"
@@ -546,7 +542,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                     <ExternalLink size={12} />
                   </a>
                 )}
-              </div>**/}
+              </div>
               <button
                 onClick={() => setShowVercelDialog(true)}
                 className="w-full flex items-center gap-2 px-2 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
