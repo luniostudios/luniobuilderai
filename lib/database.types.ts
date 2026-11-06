@@ -50,6 +50,7 @@ export type Database = {
           owner_id: string;
           name: string;
           html: string;
+          source_files: Json;
           cms_data: Json;
           site_metadata: Json;
           encrypted_vercel_token: string | null;
@@ -64,6 +65,7 @@ export type Database = {
           owner_id: string;
           name?: string;
           html?: string;
+          source_files?: Json;
           cms_data?: Json;
           site_metadata?: Json;
           encrypted_vercel_token?: string | null;
@@ -78,6 +80,7 @@ export type Database = {
           owner_id?: string;
           name?: string;
           html?: string;
+          source_files?: Json;
           cms_data?: Json;
           site_metadata?: Json;
           encrypted_vercel_token?: string | null;
@@ -180,6 +183,12 @@ export type Database = {
         Row: { project_id: string; ip_hash: string; window_started: string; request_count: number };
         Insert: { project_id: string; ip_hash: string; window_started: string; request_count?: number };
         Update: { project_id?: string; ip_hash?: string; window_started?: string; request_count?: number };
+        Relationships: [];
+      };
+      site_cms_entries: {
+        Row: { id: string; project_id: string; collection_id: string; record_data: Json; created_at: string };
+        Insert: { id?: string; project_id: string; collection_id: string; record_data: Json; created_at?: string };
+        Update: { id?: string; project_id?: string; collection_id?: string; record_data?: Json; created_at?: string };
         Relationships: [];
       };
       user_model_settings: {

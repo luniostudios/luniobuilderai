@@ -5,6 +5,8 @@ import { getSupabaseAdmin } from "@/lib/db";
 import { normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { parseImageAttachments } from "@/lib/image-attachments";
 import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
+import { normalizeProjectSourceFiles } from "@/lib/project-files";
+import { buildProjectPreview } from "@/lib/project-source";
 import { baseprompt } from "./prompt";
 import { decryptIntegrationKey } from "@/lib/integrations";
 import { getModelOption, isModelId, MODEL_KEY_COLUMNS } from "@/lib/ai-models";
@@ -21,7 +23,7 @@ type AnthropicMessage = { role: "user" | "assistant"; content: AnthropicBlock[] 
 type WebsiteUpdate = {
   name: string;
   reply: string;
-  html: string;
+  files: unknown[];
   cmsData: unknown;
   protectedPages: unknown;
 };
@@ -62,7 +64,15 @@ const RESPONSE_SCHEMA = {
   properties: {
     name: { type: "string" },
     reply: { type: "string" },
-    html: { type: "string" },
+    files: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { path: { type: "string" }, content: { type: "string" } },
+        required: ["path", "content"],
+        additionalProperties: false,
+      },
+    },
     cmsData: {
       type: "object",
       properties: {
@@ -122,7 +132,7 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ["name", "reply", "html", "cmsData", "protectedPages"],
+  required: ["name", "reply", "files", "cmsData", "protectedPages"],
   additionalProperties: false,
 };
 
@@ -131,7 +141,7 @@ function isWebsiteUpdate(value: unknown): value is WebsiteUpdate {
   return (
     "name" in value && typeof value.name === "string" &&
     "reply" in value && typeof value.reply === "string" &&
-    "html" in value && typeof value.html === "string" &&
+    "files" in value && Array.isArray(value.files) &&
     "protectedPages" in value && Array.isArray(value.protectedPages) &&
     "cmsData" in value && normalizeCmsData(value.cmsData) !== null
   );
@@ -289,12 +299,13 @@ export async function POST(request: Request, { params }: RouteContext) {
   }, []);
   const systemPrompt = [
     baseprompt,
-    "Return only one valid JSON object with exactly five fields: name (string), reply (string), html (string), cmsData (an object with a collections array), and protectedPages (an array of private page objects). Do not wrap it in markdown.",
-    "Use the conversation history to understand follow-up answers and build without repeating answered questions. Build now when reasonable assumptions are enough; ask only for information that is essential to fulfill the request. For a clarification-only turn, put the concise question in reply, set html to an empty string, and return cmsData and protectedPages unchanged. Empty html means no project changes; after the user answers, return the complete updated HTML document and protectedPages array.",
+    "Return only one valid JSON object with exactly five fields: name (string), reply (string), files (an array of { path, content } source files), cmsData (an object with a collections array), and protectedPages (an array of private page objects). Do not wrap it in markdown.",
+    "Use the conversation history to understand follow-up answers and build without repeating answered questions. Build now when reasonable assumptions are enough; ask only for information that is essential to fulfill the request. For a clarification-only turn, put the concise question in reply, return files as an empty array, and return cmsData and protectedPages unchanged. Empty files means no project changes; after the user answers, return the complete updated React source files and protectedPages array.",
     "Visitor authentication uses the site's Supabase Auth service and protectedPages are served only by the server. Keep private HTML out of the public html string. For newsletters and stores, use the exact published-site endpoint contract in the system instructions; do not fake API success.",
     `Project id: ${projectId}\nConfigured server-side API integrations: ${configuredIntegrations.join(", ") || "none"}. Newsletter signup, visitor accounts, protected pages, product catalog, and Stripe checkout use built-in services on the dedicated published-site domain.`,
     `Unsplash search endpoint: /api/projects/${projectId}/integrations/unsplash/search?query=...`,
-    `Current complete HTML (empty means this is a new website):\n${currentProject.html.slice(0, 120000) || "(empty)"}`,
+    `Current React source files (empty means this is a new or legacy HTML-only project):\n${JSON.stringify(currentProject.source_files ?? []).slice(0, 120000)}`,
+    `Legacy/current rendered HTML snapshot (use as a visual reference only when no React source files exist):\n${currentProject.source_files && Array.isArray(currentProject.source_files) && currentProject.source_files.length ? "(React source is available above)" : currentProject.html.slice(0, 120000) || "(empty)"}`,
     `Current CMS data:\n${JSON.stringify(currentProject.cms_data ?? { collections: [] }).slice(0, 60000)}`,
     `Current private pages (keep each page's existing path and accessMode unless asked to change them; include their complete HTML when returning a website update):\n${JSON.stringify((currentProtectedPages ?? []).map((page) => ({ path: page.path, title: page.title, html: page.html, accessMode: page.access_mode })).slice(0, 20)).slice(0, 160000)}`,
   ].join("\n\n");
@@ -482,7 +493,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "The AI returned an invalid website update. Please try again." }, { status: 502 });
   }
 
-  if (!isWebsiteUpdate(update) || update.html.length > 1000000) {
+  if (!isWebsiteUpdate(update) || JSON.stringify(update.files).length > 750000) {
     return NextResponse.json({ error: "The AI returned an invalid or oversized website." }, { status: 502 });
   }
   if (!update.reply.trim()) {
@@ -492,11 +503,24 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!protectedPages) return NextResponse.json({ error: "The AI returned invalid protected pages. Please try again." }, { status: 502 });
 
   let updatedProject: Project = currentProject;
-  if (update.html.trim()) {
-    let html = update.html.trim();
+  if (update.files.length) {
+    const sourceFiles = normalizeProjectSourceFiles(update.files);
+    if (!sourceFiles) return NextResponse.json({ error: "The AI returned invalid React project files. Please try again." }, { status: 502 });
     attachments.forEach((image, index) => {
-      html = html.replaceAll(`LUNIO_UPLOADED_IMAGE_${index}`, `data:image/webp;base64,${image.data}`);
+      sourceFiles.forEach((file) => {
+        file.content = file.content.replaceAll(`LUNIO_UPLOADED_IMAGE_${index}`, `data:image/webp;base64,${image.data}`);
+      });
     });
+    if (sourceFiles.reduce((total, file) => total + file.content.length, 0) > 6000000) {
+      return NextResponse.json({ error: "The generated project with attached images is too large. Try smaller images." }, { status: 502 });
+    }
+    let html: string;
+    try {
+      html = await buildProjectPreview(sourceFiles);
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 500) : "Could not compile the generated React project.";
+      return NextResponse.json({ error: `The generated React project could not be compiled: ${message}` }, { status: 502 });
+    }
     if (html.length > 6000000) {
       return NextResponse.json({ error: "The generated website with attached images is too large. Try smaller images." }, { status: 502 });
     }
@@ -528,7 +552,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
     const { data, error: updateError } = await supabase
       .from("projects")
-      .update({ name, html, cms_data: toCmsJson(normalizeCmsData(update.cmsData)!), updated_date: new Date().toISOString() })
+      .update({ name, html, source_files: sourceFiles as unknown as Database["public"]["Tables"]["projects"]["Update"]["source_files"], cms_data: toCmsJson(normalizeCmsData(update.cmsData)!), updated_date: new Date().toISOString() })
       .eq("id", projectId)
       .eq("owner_id", ownerId)
       .select(PROJECT_CLIENT_COLUMNS)

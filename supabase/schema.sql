@@ -75,6 +75,7 @@ create table if not exists public.projects (
   owner_id text not null,
   name text not null default 'Untitled site',
   html text not null default '',
+  source_files jsonb not null default '[]'::jsonb,
   cms_data jsonb not null default '{"collections": []}'::jsonb,
   site_metadata jsonb not null default '{"title":"","description":"","keywords":"","author":"","faviconUrl":"","socialImageUrl":"","themeColor":""}'::jsonb,
   stripe_connect_account_id text,
@@ -87,6 +88,7 @@ create table if not exists public.projects (
 
 alter table public.projects add column if not exists published_slug text;
 alter table public.projects add column if not exists published_at timestamptz;
+alter table public.projects add column if not exists source_files jsonb not null default '[]'::jsonb;
 alter table public.projects add column if not exists cms_data jsonb not null default '{"collections": []}'::jsonb;
 alter table public.projects add column if not exists site_metadata jsonb not null default '{"title":"","description":"","keywords":"","author":"","faviconUrl":"","socialImageUrl":"","themeColor":""}'::jsonb;
 alter table public.projects add column if not exists encrypted_vercel_token text;
@@ -178,6 +180,14 @@ create table if not exists public.site_form_rate_limits (
   primary key (project_id, ip_hash, window_started)
 );
 
+create table if not exists public.site_cms_entries (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  collection_id text not null,
+  record_data jsonb not null check (jsonb_typeof(record_data) = 'object'),
+  created_at timestamptz not null default now()
+);
+
 alter table public.site_memberships enable row level security;
 alter table public.site_private_pages enable row level security;
 alter table public.site_subscribers enable row level security;
@@ -187,11 +197,12 @@ alter table public.site_campaigns enable row level security;
 alter table public.site_products add column if not exists requires_shipping boolean not null default false;
 alter table public.site_orders add column if not exists shipping_address jsonb not null default '{}'::jsonb;
 alter table public.site_form_rate_limits enable row level security;
+alter table public.site_cms_entries enable row level security;
 revoke all on table public.site_memberships, public.site_private_pages, public.site_subscribers,
-  public.site_products, public.site_orders, public.site_form_rate_limits from public, anon, authenticated;
+  public.site_products, public.site_orders, public.site_form_rate_limits, public.site_cms_entries from public, anon, authenticated;
 revoke all on table public.site_campaigns from public, anon, authenticated;
 grant all on table public.site_memberships, public.site_private_pages, public.site_subscribers,
-  public.site_products, public.site_orders, public.site_form_rate_limits to service_role;
+  public.site_products, public.site_orders, public.site_form_rate_limits, public.site_cms_entries to service_role;
 grant all on table public.site_campaigns to service_role;
 
 create or replace function public.reserve_site_form_submission(
@@ -227,6 +238,8 @@ create index if not exists site_orders_project_created_idx
   on public.site_orders (project_id, created_at desc);
 create index if not exists site_campaigns_project_created_idx
   on public.site_campaigns (project_id, created_at desc);
+create index if not exists site_cms_entries_collection_created_idx
+  on public.site_cms_entries (project_id, collection_id, created_at desc);
 
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),

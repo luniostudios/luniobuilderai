@@ -3,6 +3,8 @@ import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
 import { normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { normalizeSiteMetadata, toSiteMetadataJson } from "@/lib/site-metadata";
+import { normalizeProjectSourceFiles } from "@/lib/project-files";
+import { buildProjectPreview } from "@/lib/project-source";
 import { PROJECT_CLIENT_COLUMNS } from "@/lib/project-fields";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
@@ -36,6 +38,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const updates: {
     name?: string;
     html?: string;
+    source_files?: import("@/lib/database.types").Json;
     cms_data?: import("@/lib/database.types").Json;
     site_metadata?: import("@/lib/database.types").Json;
     updated_date: string;
@@ -43,7 +46,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     updated_date: new Date().toISOString(),
   };
   if ("name" in body && typeof body.name === "string") updates.name = body.name.trim().slice(0, 120);
-  if ("html" in body && typeof body.html === "string") updates.html = body.html;
+  if ("source_files" in body) {
+    const sourceFiles = normalizeProjectSourceFiles(body.source_files);
+    if (!sourceFiles) return NextResponse.json({ error: "Invalid React project files" }, { status: 400 });
+    try {
+      updates.source_files = sourceFiles as unknown as import("@/lib/database.types").Json;
+      updates.html = await buildProjectPreview(sourceFiles);
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 500) : "Could not compile project files.";
+      return NextResponse.json({ error: `Could not compile React project: ${message}` }, { status: 400 });
+    }
+  } else if ("html" in body && typeof body.html === "string") {
+    updates.html = body.html;
+    updates.source_files = [];
+  }
   if ("cms_data" in body) {
     const cmsData = normalizeCmsData(body.cms_data);
     if (!cmsData) return NextResponse.json({ error: "Invalid CMS data" }, { status: 400 });
@@ -54,7 +70,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     if (!siteMetadata) return NextResponse.json({ error: "Invalid site metadata" }, { status: 400 });
     updates.site_metadata = toSiteMetadataJson(siteMetadata);
   }
-  if (updates.name === undefined && updates.html === undefined && updates.cms_data === undefined && updates.site_metadata === undefined) {
+  if (updates.name === undefined && updates.html === undefined && updates.source_files === undefined && updates.cms_data === undefined && updates.site_metadata === undefined) {
     return NextResponse.json({ error: "No supported project fields provided" }, { status: 400 });
   }
 

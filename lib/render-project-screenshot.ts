@@ -71,7 +71,7 @@ export async function renderProjectScreenshot(html: string): Promise<Uint8Array>
 
   try {
     page.setDefaultNavigationTimeout(10000);
-    await page.setJavaScriptEnabled(false);
+    await page.setJavaScriptEnabled(true);
     await page.setRequestInterception(true);
     page.on("request", (request) => {
       try {

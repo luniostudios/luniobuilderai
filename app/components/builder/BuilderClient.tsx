@@ -14,6 +14,7 @@ import ModelSelector from "@/app/components/home/ModelSelector";
 import { injectPreviewInspector, patchElementDelete, patchElementImage, patchElementStyle, patchElementText, type SelectedElement } from "@/lib/preview-inspector";
 import { injectCmsContent, normalizeCmsData, toCmsJson } from "@/lib/cms";
 import { injectSiteMetadata } from "@/lib/site-metadata";
+import { normalizeProjectSourceFiles } from "@/lib/project-files";
 import type { CmsData } from "@/lib/cms";
 import ImageAttachments from "@/app/components/home/ImageAttachments";
 import { parseImageAttachments, type ImageAttachment } from "@/lib/image-attachments";
@@ -521,7 +522,7 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           </div>
 
           {showPublishMenu && (
-            <div className="absolute top-full right-0 mt-1 px-4 w-48 bg-black border border-gray-700 rounded-sm shadow-2xl py-2 z-50">
+            <div className="absolute top-full right-0 mt-1 px-4 w-56 bg-black border border-gray-700 rounded-sm shadow-2xl py-2 z-50">
               <div className="flex items-center gap-1">
                 <button
                   onClick={project?.published_slug ? handleUnpublish : handlePublish}
@@ -550,15 +551,6 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                 <IconBrandVercel stroke={2} size={12} />
                 Publish to Vercel
               </button>
-              <div className="border-t border-gray-800 mt-1 pt-1">
-                <Link
-                  href={`/dashboard/settings/${projectId}`}
-                  className="w-full flex items-center gap-2 px-2 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
-                >
-                  <Settings size={12} />
-                  Site settings
-                </Link>
-              </div>
             </div>
           )}
         </div>
@@ -701,10 +693,12 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
           <ProjectCodeView
             projectName={project.name}
             code={injectSiteMetadata(injectCmsContent(project.html, project.cms_data), project.site_metadata, project.name)}
+            sourceFiles={normalizeProjectSourceFiles(project.source_files) ?? []}
+            cmsData={project.cms_data}
           />
         ) : (
           <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
-            Generate your website to view its HTML source.
+            Generate your React project to view its source files.
           </div>
         )
       ) : builderView === "cms" ? (
@@ -833,7 +827,13 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
                   <button
                     type="button"
                     aria-pressed={previewMode === "edit"}
-                    onClick={() => setPreviewMode("edit")}
+                    onClick={() => {
+                      if (
+                        previewMode !== "edit" && normalizeProjectSourceFiles(project.source_files)?.length &&
+                        !window.confirm("Visual editing will replace this React project's source with a single HTML file. Continue?")
+                      ) return;
+                      setPreviewMode("edit");
+                    }}
                     className={`flex h-8 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors ${previewMode === "edit" ? "" : ""}`}
                   >
                     <Pencil className="h-3.5 w-3.5" /> Edit

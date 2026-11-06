@@ -7,11 +7,16 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  serverExternalPackages: ["esbuild"],
   turbopack: {
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
+      },
+      ".md": {
+        loaders: ["@mdx-js/loader"],
+        as: ".md",
       },
     },
   },
