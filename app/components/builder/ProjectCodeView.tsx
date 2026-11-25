@@ -5,23 +5,21 @@ import Editor from "@monaco-editor/react";
 import { Check, Clipboard, Download } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
-import { createViteProjectFiles, type ProjectSourceFile } from "@/lib/project-files";
+import type { ProjectSourceFile } from "@/lib/project-files";
 
 export default function ProjectCodeView({
   projectName,
   code,
   sourceFiles,
-  cmsData,
 }: {
   projectName: string;
   code: string;
   sourceFiles: ProjectSourceFile[];
-  cmsData: unknown;
 }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [selectedPath, setSelectedPath] = useState(sourceFiles[0]?.path ?? "index.html");
-  const files = sourceFiles.length ? createViteProjectFiles(sourceFiles, projectName, cmsData) : [{ path: "index.html", content: code }];
+  const files = sourceFiles.length ? sourceFiles : [{ path: "index.html", content: code }];
   const activeFile = files.find((file) => file.path === selectedPath) ?? files[0];
 
   async function copyCode() {
@@ -60,7 +58,7 @@ export default function ProjectCodeView({
         <div>
           <h2 id="project-code-title" className="text-sm font-semibold">Project source</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {sourceFiles.length ? `React + Vite · ${files.length} files` : `HTML · ${(new Blob([code]).size / 1024).toFixed(1)} KB`}
+            {sourceFiles.length ? `HTML, CSS & JavaScript · ${files.length} files` : `HTML · ${(new Blob([code]).size / 1024).toFixed(1)} KB`}
           </p>
         </div>
         <div className="flex items-center gap-2">

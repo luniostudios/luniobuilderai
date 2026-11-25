@@ -694,7 +694,6 @@ export default function BuilderClient({ projectId }: { projectId: string }) {
             projectName={project.name}
             code={injectSiteMetadata(injectCmsContent(project.html, project.cms_data), project.site_metadata, project.name)}
             sourceFiles={normalizeProjectSourceFiles(project.source_files) ?? []}
-            cmsData={project.cms_data}
           />
         ) : (
           <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">

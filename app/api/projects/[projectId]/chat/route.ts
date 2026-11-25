@@ -279,15 +279,16 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (insertError) return NextResponse.json({ error: "Could not save your message." }, { status: 500 });
 
-  const history = ((priorMessages ?? []) as Message[]).reverse().map((message) => ({
+  const chronologicalMessages = [...((priorMessages ?? []) as Message[])].reverse();
+  const history = chronologicalMessages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content.slice(-8000) }],
   }));
-  const openAiHistory = ((priorMessages ?? []) as Message[]).reverse().map((message) => ({
+  const openAiHistory = chronologicalMessages.map((message) => ({
     role: message.role,
     content: message.content.slice(-8000),
   }));
-  const anthropicHistory = ((priorMessages ?? []) as Message[]).reverse().reduce<AnthropicMessage[]>((history, message) => {
+  const anthropicHistory = chronologicalMessages.reduce<AnthropicMessage[]>((history, message) => {
     const lastMessage = history[history.length - 1];
     const textBlock = { type: "text" as const, text: message.content.slice(-8000) };
     if (lastMessage?.role === message.role) {
@@ -300,12 +301,12 @@ export async function POST(request: Request, { params }: RouteContext) {
   const systemPrompt = [
     baseprompt,
     "Return only one valid JSON object with exactly five fields: name (string), reply (string), files (an array of { path, content } source files), cmsData (an object with a collections array), and protectedPages (an array of private page objects). Do not wrap it in markdown.",
-    "Use the conversation history to understand follow-up answers and build without repeating answered questions. Build now when reasonable assumptions are enough; ask only for information that is essential to fulfill the request. For a clarification-only turn, put the concise question in reply, return files as an empty array, and return cmsData and protectedPages unchanged. Empty files means no project changes; after the user answers, return the complete updated React source files and protectedPages array.",
+    "Use the conversation history to understand follow-up answers and build without repeating answered questions. Build now when reasonable assumptions are enough; ask only for information that is essential to fulfill the request. For a clarification-only turn, put the concise question in reply, return files as an empty array, and return cmsData and protectedPages unchanged. Empty files means no project changes; after the user answers, return the complete updated website files and protectedPages array.",
     "Visitor authentication uses the site's Supabase Auth service and protectedPages are served only by the server. Keep private HTML out of the public html string. For newsletters and stores, use the exact published-site endpoint contract in the system instructions; do not fake API success.",
     `Project id: ${projectId}\nConfigured server-side API integrations: ${configuredIntegrations.join(", ") || "none"}. Newsletter signup, visitor accounts, protected pages, product catalog, and Stripe checkout use built-in services on the dedicated published-site domain.`,
     `Unsplash search endpoint: /api/projects/${projectId}/integrations/unsplash/search?query=...`,
-    `Current React source files (empty means this is a new or legacy HTML-only project):\n${JSON.stringify(currentProject.source_files ?? []).slice(0, 120000)}`,
-    `Legacy/current rendered HTML snapshot (use as a visual reference only when no React source files exist):\n${currentProject.source_files && Array.isArray(currentProject.source_files) && currentProject.source_files.length ? "(React source is available above)" : currentProject.html.slice(0, 120000) || "(empty)"}`,
+    `Current website source files (empty means this is a new or legacy HTML-only project):\n${JSON.stringify(currentProject.source_files ?? []).slice(0, 120000)}`,
+    `Legacy/current rendered HTML snapshot (use as a visual reference only when no source files exist):\n${currentProject.source_files && Array.isArray(currentProject.source_files) && currentProject.source_files.length ? "(source files are available above)" : currentProject.html.slice(0, 120000) || "(empty)"}`,
     `Current CMS data:\n${JSON.stringify(currentProject.cms_data ?? { collections: [] }).slice(0, 60000)}`,
     `Current private pages (keep each page's existing path and accessMode unless asked to change them; include their complete HTML when returning a website update):\n${JSON.stringify((currentProtectedPages ?? []).map((page) => ({ path: page.path, title: page.title, html: page.html, accessMode: page.access_mode })).slice(0, 20)).slice(0, 160000)}`,
   ].join("\n\n");
@@ -336,9 +337,8 @@ export async function POST(request: Request, { params }: RouteContext) {
               },
             ],
             generationConfig: {
-              responseFormat: {
-                text: { mimeType: "APPLICATION_JSON", schema: RESPONSE_SCHEMA },
-              },
+              responseMimeType: "application/json",
+              responseJsonSchema: RESPONSE_SCHEMA,
               maxOutputTokens: 24000,
             },
           }),
@@ -399,9 +399,9 @@ export async function POST(request: Request, { params }: RouteContext) {
           model: selectedModel.id,
           system: systemPrompt,
           messages: anthropicMessages,
-          max_tokens: 24000,
+          max_tokens: 64000,
         }),
-        signal: AbortSignal.timeout(90000),
+        signal: AbortSignal.timeout(600000),
       });
     }
   } catch {
@@ -505,7 +505,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   let updatedProject: Project = currentProject;
   if (update.files.length) {
     const sourceFiles = normalizeProjectSourceFiles(update.files);
-    if (!sourceFiles) return NextResponse.json({ error: "The AI returned invalid React project files. Please try again." }, { status: 502 });
+    if (!sourceFiles) return NextResponse.json({ error: "The AI returned invalid website files. Please try again." }, { status: 502 });
     attachments.forEach((image, index) => {
       sourceFiles.forEach((file) => {
         file.content = file.content.replaceAll(`LUNIO_UPLOADED_IMAGE_${index}`, `data:image/webp;base64,${image.data}`);
@@ -518,8 +518,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     try {
       html = await buildProjectPreview(sourceFiles);
     } catch (error) {
-      const message = error instanceof Error ? error.message.slice(0, 500) : "Could not compile the generated React project.";
-      return NextResponse.json({ error: `The generated React project could not be compiled: ${message}` }, { status: 502 });
+      const message = error instanceof Error ? error.message.slice(0, 500) : "Could not build the generated website.";
+      return NextResponse.json({ error: `The generated website could not be built: ${message}` }, { status: 502 });
     }
     if (html.length > 6000000) {
       return NextResponse.json({ error: "The generated website with attached images is too large. Try smaller images." }, { status: 502 });

@@ -3,7 +3,7 @@ import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/db";
 import { injectCmsContent } from "@/lib/cms";
 import { decryptIntegrationKey, encryptIntegrationKey } from "@/lib/integrations";
-import { createViteProjectFiles, normalizeProjectSourceFiles } from "@/lib/project-files";
+import { normalizeProjectSourceFiles } from "@/lib/project-files";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -63,8 +63,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (loadError) return NextResponse.json({ error: "Could not load this project." }, { status: 500 });
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
   const sourceFiles = normalizeProjectSourceFiles(project.source_files);
-  const viteFiles = sourceFiles ? createViteProjectFiles(sourceFiles, project.name, project.cms_data) : null;
-  if (!project.html.trim() && !viteFiles) return NextResponse.json({ error: "Add website content before deploying." }, { status: 400 });
+  if (!project.html.trim() && !sourceFiles) return NextResponse.json({ error: "Add website content before deploying." }, { status: 400 });
 
   let savedToken = "";
   if (project.encrypted_vercel_token) {
@@ -109,10 +108,10 @@ export async function POST(request: Request, { params }: RouteContext) {
         headers,
         body: JSON.stringify({
           name,
-          framework: viteFiles ? "vite" : null,
-          buildCommand: viteFiles ? "npm run build" : null,
-          installCommand: viteFiles ? "npm install" : null,
-          outputDirectory: viteFiles ? "dist" : null,
+          framework: null,
+          buildCommand: null,
+          installCommand: null,
+          outputDirectory: null,
         }),
         signal: AbortSignal.timeout(20000),
       });
@@ -130,8 +129,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       vercelProjectId = createdProject.id;
     }
 
-    const deploymentFiles = viteFiles
-      ? viteFiles.map((file) => ({ file: file.path, content: file.content }))
+    const deploymentFiles = sourceFiles
+      ? sourceFiles.map((file) => ({ file: file.path, content: file.path === "index.html" ? injectCmsContent(file.content, project.cms_data) : file.content }))
       : [{ file: "index.html", content: injectCmsContent(project.html, project.cms_data) }];
     const deploymentResponse = await fetch(`https://api.vercel.com/v13/deployments${teamQuery}`, {
       method: "POST",
@@ -141,10 +140,10 @@ export async function POST(request: Request, { params }: RouteContext) {
         project: vercelProjectId,
         target: "production",
         projectSettings: {
-          framework: viteFiles ? "vite" : null,
-          buildCommand: viteFiles ? "npm run build" : null,
-          installCommand: viteFiles ? "npm install" : null,
-          outputDirectory: viteFiles ? "dist" : null,
+          framework: null,
+          buildCommand: null,
+          installCommand: null,
+          outputDirectory: null,
         },
         files: deploymentFiles.map((file) => ({ file: file.file, data: file.content, encoding: "utf-8" })),
       }),
